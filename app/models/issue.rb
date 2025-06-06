@@ -28,25 +28,78 @@ class Issue < ApplicationRecord
 
   DEPENDABOT_USERNAMES = ['dependabot[bot]', 'dependabot-preview[bot]'].freeze
   DEPENDABOT_ECOSYSTEMS = {
+    # Ruby
     'ruby' => 'rubygems',
-    'docker' => 'docker',
-    'rust' => 'cargo',
-    'github_actions' => 'actions',
+    'rubygems' => 'rubygems',
+    'bundler' => 'rubygems',
+    
+    # JavaScript/Node.js
     'javascript' => 'npm',
-    'go' => 'go',
-    'php' => 'packagist',
-    'python' => 'pip',
-    'elixir' => 'hex',
-    '.NET' => 'nuget',
     'npm' => 'npm',
     'yarn' => 'npm',
-    'java' => 'maven',
-    'elm' => 'elm',
-    'gomod' => 'go',
-    'terraform' => 'terraform',
-    'gradle' => 'gradle',
+    'pnpm' => 'npm',
+    
+    # Python
+    'python' => 'pip',
     'pip' => 'pip',
+    'pipenv' => 'pip',
+    'poetry' => 'pip',
+    'uv' => 'pip',
+    
+    # Java/JVM
+    'java' => 'maven',
+    'maven' => 'maven',
+    'gradle' => 'gradle',
+    'kotlin' => 'maven',
+    'scala' => 'maven',
+    
+    # .NET
+    '.net' => 'nuget',
+    'nuget' => 'nuget',
+    'dotnet' => 'nuget',
+    
+    # Go
+    'go' => 'go',
+    'gomod' => 'go',
+    'golang' => 'go',
+    
+    # PHP
+    'php' => 'packagist',
+    'composer' => 'packagist',
+    'packagist' => 'packagist',
+    
+    # Rust
+    'rust' => 'cargo',
+    'cargo' => 'cargo',
+    
+    # Docker
+    'docker' => 'docker',
+    'dockerfile' => 'docker',
+    
+    # GitHub Actions
+    'github_actions' => 'actions',
+    'github-actions' => 'actions',
+    'actions' => 'actions',
+    
+    # Infrastructure
+    'terraform' => 'terraform',
+    'helm' => 'helm',
+    'kubernetes' => 'kubernetes',
+    
+    # Other languages
+    'elixir' => 'hex',
+    'hex' => 'hex',
     'dart' => 'pub',
+    'pub' => 'pub',
+    'elm' => 'elm',
+    'swift' => 'swift',
+    'cocoapods' => 'cocoapods',
+    'carthage' => 'carthage',
+    'mix' => 'hex',
+    
+    # Package managers by ecosystem
+    'conda' => 'conda',
+    'conda-forge' => 'conda',
   }
 
   scope :dependabot, -> { where(user: DEPENDABOT_USERNAMES) }
@@ -113,8 +166,30 @@ class Issue < ApplicationRecord
       }
     end
     
+    # Try single package without version in title: "Bump package-name"
+    single_no_version_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?<package_name>\S+)(?: in (?<path>.+))?$/i)
+    
+    if single_no_version_match && body.present?
+      package_name = single_no_version_match[:package_name]
+      # Look for version information in body
+      version_match = body.match(/Updates `#{Regexp.escape(package_name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
+      
+      if version_match
+        return {
+          prefix: single_no_version_match[:prefix],
+          packages: [{
+            name: package_name,
+            old_version: version_match[:old_version],
+            new_version: version_match[:new_version]
+          }],
+          path: single_no_version_match[:path],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
+      end
+    end
+    
     # Try group updates with table in body
-    group_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?:the\s+)?(?<group_name>[\w_-]+) group (?:across \d+ director(?:y|ies) )?with (?<update_count>\d+) updates?(?: in (?:the\s+)?(?<path>.+?))?$/)
+    group_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:the\s+)?(?<group_name>[\w_-]+) group (?:across \d+ director(?:y|ies) )?(?:in (?<path>[^\s]+) )?with (?<update_count>\d+) updates?$/i)
     
     if group_match && body.present?
       # Parse markdown table from body
@@ -129,7 +204,82 @@ class Issue < ApplicationRecord
           path: group_match[:path],
           ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
         }
+      else
+        # For group updates without parseable package details, return basic info
+        return {
+          prefix: group_match[:prefix],
+          group_name: group_match[:group_name],
+          update_count: group_match[:update_count].to_i,
+          packages: [],
+          path: group_match[:path],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
       end
+    end
+    
+    # Try requirement update formats
+    if title.include?(" requirement ")
+      # Format: "Update package requirement from X to Y"
+      if title.start_with?("Update ") && title.include?(" requirement from ") && title.include?(" to ")
+        parts = title.split(" requirement from ")
+        if parts.length == 2
+          package_name = parts[0].sub("Update ", "")
+          version_and_path = parts[1]
+          
+          if version_and_path.include?(" to ")
+            version_parts = version_and_path.split(" to ")
+            old_version = version_parts[0]
+            remaining = version_parts[1]
+            
+            if remaining.include?(" in ")
+              new_version, path = remaining.split(" in ", 2)
+            else
+              new_version = remaining
+              path = nil
+            end
+            
+            return {
+              prefix: "Update",
+              packages: [{
+                name: package_name,
+                old_version: old_version,
+                new_version: new_version
+              }],
+              path: path,
+              ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+            }
+          end
+        end
+      end
+      
+      # Format: "Update package requirement to X"
+      requirement_to_match = title.match(/^(?<prefix>.*?)Update (?<package_name>\S+) requirement to (?<new_version>\S+)$/i)
+      if requirement_to_match
+        return {
+          prefix: requirement_to_match[:prefix],
+          packages: [{
+            name: requirement_to_match[:package_name],
+            new_version: requirement_to_match[:new_version]
+          }],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
+      end
+    end
+    
+    # Try version range format: "Bump package to X, Y" or "Update package to X"
+    version_range_match = title.match(/^(?<prefix>.+?)\s+(?<package_name>\S+) to (?<versions>[\d\.,\s]+)$/i)
+    
+    if version_range_match
+      versions = version_range_match[:versions].split(',').map(&:strip)
+      # For now, just use the last version as the new version
+      return {
+        prefix: version_range_match[:prefix],
+        packages: [{
+          name: version_range_match[:package_name],
+          new_version: versions.last
+        }],
+        ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+      }
     end
     
     nil
@@ -162,6 +312,28 @@ class Issue < ApplicationRecord
           old_version: from_version.strip,
           new_version: to_version.strip
         }
+      end
+    else
+      # Look for individual "Updates `package` from X to Y" lines
+      body.scan(/Updates `([^`]+)` from ([^\s]+) to ([^\s]+)/) do |package_name, from_version, to_version|
+        packages << {
+          name: package_name,
+          old_version: from_version,
+          new_version: to_version
+        }
+      end
+      
+      # Look for "Performed the following updates:" format
+      if packages.empty? && body.include?("Performed the following updates:")
+        # Parse "- Updated PackageName from X to Y in /path" lines
+        body.scan(/- Updated ([^\s]+) from ([^\s]+) to ([^\s]+)(?: in ([^\n]+))?/) do |package_name, from_version, to_version, path|
+          packages << {
+            name: package_name,
+            old_version: from_version,
+            new_version: to_version,
+            path: path&.strip
+          }
+        end
       end
     end
     

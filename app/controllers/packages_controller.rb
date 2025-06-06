@@ -41,7 +41,9 @@ class PackagesController < ApplicationController
 
   def set_package
     if params[:ecosystem] && params[:name]
-      @package = Package.find_by!(ecosystem: params[:ecosystem], name: params[:name])
+      # URL decode the name parameter to handle special characters
+      decoded_name = CGI.unescape(params[:name])
+      @package = Package.find_by!(ecosystem: params[:ecosystem], name: decoded_name)
     else
       @package = Package.find(params[:id])
     end

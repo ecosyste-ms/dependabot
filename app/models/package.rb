@@ -24,7 +24,14 @@ class Package < ApplicationRecord
     'packagist' => 'composer',
     'pub' => 'pub',
     'terraform' => 'terraform',
-    'actions' => 'github'  # GitHub Actions
+    'actions' => 'github',  # GitHub Actions
+    'elm' => 'elm',
+    'swift' => 'swift',
+    'cocoapods' => 'cocoapods',
+    'carthage' => 'carthage',
+    'conda' => 'conda',
+    'helm' => 'helm',
+    'kubernetes' => 'k8s'
   }.freeze
   
   def to_s

@@ -55,7 +55,7 @@ Rails.application.routes.draw do
     collection do
       get 'search'
       get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
-      get ':ecosystem/*name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/ }
+      get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
     end
   end
 
