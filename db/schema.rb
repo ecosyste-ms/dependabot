@@ -10,10 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_04_02_102936) do
+ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
-  enable_extension "plpgsql"
 
   create_table "exports", force: :cascade do |t|
     t.string "date"
@@ -112,5 +112,4 @@ ActiveRecord::Schema[7.1].define(version: 2024_04_02_102936) do
     t.index "host_id, lower((full_name)::text)", name: "index_repositories_on_host_id_lower_full_name", unique: true
     t.index ["owner"], name: "index_repositories_on_owner"
   end
-
 end
