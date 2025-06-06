@@ -1,0 +1,84 @@
+<div class="container-sm">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <%= link_to "Packages", packages_path %>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Search
+      </li>
+    </ol>
+  </nav>
+
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <h1 class="mb-3">
+        <%= octicon "search", class: "me-2" %>
+        Search Packages
+      </h1>
+      <% if @query.present? %>
+        <p class="text-muted">
+          Results for "<strong><%= @query %></strong>"
+        </p>
+      <% else %>
+        <p class="text-muted">
+          Search for packages that have been updated by Dependabot.
+        </p>
+      <% end %>
+    </div>
+    <div class="col-lg-4">
+      <%= form_with url: search_packages_path, method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.text_field :q, placeholder: "Search packages...", class: "form-control me-2", value: @query %>
+        <%= form.submit "Search", class: "btn btn-primary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @query.present? %>
+    <% if @packages.any? %>
+      <div class="row">
+        <% @packages.each do |package| %>
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
+                    <code><%= package.name %></code>
+                  <% end %>
+                </h5>
+                <p class="card-text">
+                  <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
+                  <span class="text-muted">
+                    <%= pluralize package.issues_count, 'update' %>
+                  </span>
+                </p>
+                <p class="card-text">
+                  <small class="text-muted">
+                    PURL: <code><%= package.purl %></code>
+                  </small>
+                </p>
+                <%= link_to "View updates", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+      <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+    <% else %>
+      <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">No Results Found</h4>
+        <p>No packages found matching "<strong><%= @query %></strong>".</p>
+        <hr>
+        <p class="mb-0">
+          Try searching with different terms or <%= link_to "browse all ecosystems", packages_path, class: "alert-link" %>.
+        </p>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="alert alert-info" role="alert">
+      <h4 class="alert-heading">Enter a Search Term</h4>
+      <p class="mb-0">Enter a package name to search for packages that have been updated by Dependabot.</p>
+    </div>
+  <% end %>
+</div>

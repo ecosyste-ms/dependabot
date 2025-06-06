@@ -1,15 +1,3 @@
-<div class="col-lg-4 container-sm text-center">
-  <form class="row g-2 justify-content-center" action='<%= lookup_repositories_path %>' method="get">
-    <div class="col-auto">
-      <label for="repo_name" class="visually-hidden">Repository URL</label>
-      <input name='url' type="text" class="form-control" id="url" placeholder="URL: eg https://github.com/owner/repo" size="50">
-    </div>
-    <div class="col-auto">
-      <button type="submit" class="btn btn-primary mb-3">Search</button>
-    </div>
-  </form>
-</div>
-
 <div class="container-sm">
   <h1 class='mb-3'>
     Recent Dependabot Pull Requests
@@ -31,14 +19,15 @@
                   </h5>
                   
                   <h6 class="card-subtitle mb-2 text-muted">
-                    <%= link_to issue.repository.full_name, [issue.host, issue.repository], class: "text-decoration-none" %>
+                    <%= link_to issue.repository.full_name, [issue.host, issue.repository, :issues], class: "text-decoration-none" %>
                     #<%= issue.number %>
                   </h6>
                   
                   <p class="card-text text-muted">
                     <small>
-                      <span class="badge bg-<%= issue.state == 'open' ? 'success' : 'secondary' %> me-2">
-                        <%= issue.state.capitalize %>
+                      <% effective_state = issue.effective_state %>
+                      <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
+                        <%= effective_state.capitalize %>
                       </span>
                       
                       <%= octicon "person", class: "me-1" %>

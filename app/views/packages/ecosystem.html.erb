@@ -1,0 +1,69 @@
+<div class="container-sm">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <%= link_to "Packages", packages_path %>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        <%= @ecosystem %>
+      </li>
+    </ol>
+  </nav>
+
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <h1 class="mb-3">
+        <%= octicon "package", class: "me-2" %>
+        <span class="badge bg-primary fs-3 me-2"><%= @ecosystem %></span>
+        Packages
+      </h1>
+      <p class="text-muted">
+        Packages in the <%= @ecosystem %> ecosystem that have been updated by Dependabot.
+      </p>
+    </div>
+    <div class="col-lg-4">
+      <%= form_with url: search_packages_path, method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.text_field :q, placeholder: "Search packages...", class: "form-control me-2", value: params[:q] %>
+        <%= form.submit "Search", class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @packages.any? %>
+    <div class="row">
+      <% @packages.each do |package| %>
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">
+                <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
+                  <code><%= package.name %></code>
+                <% end %>
+              </h5>
+              <p class="card-text">
+                <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
+                <span class="text-muted">
+                  <%= pluralize package.issues_count, 'update' %>
+                </span>
+              </p>
+              <p class="card-text">
+                <small class="text-muted">
+                  PURL: <code><%= package.purl %></code>
+                </small>
+              </p>
+              <%= link_to "View updates", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+  <% else %>
+    <div class="alert alert-info" role="alert">
+      <h4 class="alert-heading">No Packages Found</h4>
+      <p>No packages found in the <%= @ecosystem %> ecosystem.</p>
+      <%= link_to "Browse all ecosystems", packages_path, class: "btn btn-primary" %>
+    </div>
+  <% end %>
+</div>

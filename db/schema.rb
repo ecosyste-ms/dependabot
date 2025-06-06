@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_06_152909) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -37,6 +37,22 @@ ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
     t.integer "authors_count"
   end
 
+  create_table "issue_packages", force: :cascade do |t|
+    t.bigint "issue_id", null: false
+    t.bigint "package_id", null: false
+    t.string "old_version"
+    t.string "new_version"
+    t.string "path"
+    t.string "update_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "pr_created_at"
+    t.index ["issue_id", "package_id"], name: "index_issue_packages_on_issue_id_and_package_id", unique: true
+    t.index ["issue_id"], name: "index_issue_packages_on_issue_id"
+    t.index ["package_id"], name: "index_issue_packages_on_package_id"
+    t.index ["pr_created_at"], name: "index_issue_packages_on_pr_created_at"
+  end
+
   create_table "issues", force: :cascade do |t|
     t.integer "repository_id"
     t.string "uuid"
@@ -59,6 +75,16 @@ ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
     t.datetime "merged_at"
     t.integer "host_id"
     t.json "dependency_metadata"
+    t.text "body"
+    t.boolean "draft"
+    t.boolean "mergeable"
+    t.string "mergeable_state"
+    t.boolean "rebaseable"
+    t.integer "review_comments_count"
+    t.integer "commits_count"
+    t.integer "additions"
+    t.integer "deletions"
+    t.integer "changed_files"
     t.index ["host_id", "user"], name: "index_issues_on_host_id_and_user"
     t.index ["repository_id"], name: "index_issues_on_repository_id"
   end
@@ -72,6 +98,16 @@ ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["status"], name: "index_jobs_on_status"
+  end
+
+  create_table "packages", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "ecosystem", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "issues_count", default: 0, null: false
+    t.index ["issues_count"], name: "index_packages_on_issues_count"
+    t.index ["name", "ecosystem"], name: "index_packages_on_name_and_ecosystem", unique: true
   end
 
   create_table "repositories", force: :cascade do |t|
@@ -112,4 +148,7 @@ ActiveRecord::Schema[8.0].define(version: 2024_04_02_102936) do
     t.index "host_id, lower((full_name)::text)", name: "index_repositories_on_host_id_lower_full_name", unique: true
     t.index ["owner"], name: "index_repositories_on_owner"
   end
+
+  add_foreign_key "issue_packages", "issues"
+  add_foreign_key "issue_packages", "packages"
 end

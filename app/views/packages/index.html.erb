@@ -1,0 +1,50 @@
+<div class="container-sm">
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <h1 class="mb-3">
+        <%= octicon "package", class: "me-2" %>
+        Package Ecosystems
+      </h1>
+      <p class="text-muted">
+        Browse packages by ecosystem that have been updated by Dependabot.
+      </p>
+    </div>
+    <div class="col-lg-4">
+      <%= form_with url: search_packages_path, method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.text_field :q, placeholder: "Search packages...", class: "form-control me-2", value: params[:q] %>
+        <%= form.submit "Search", class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @ecosystems.any? %>
+    <div class="row">
+      <% @ecosystems.each do |ecosystem| %>
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">
+                <%= link_to ecosystem_packages_path(ecosystem), class: "text-decoration-none" do %>
+                  <span class="badge bg-primary fs-6 me-2"><%= ecosystem %></span>
+                <% end %>
+              </h5>
+              <p class="card-text text-muted">
+                <%= pluralize @ecosystem_counts[ecosystem], 'package' %>
+              </p>
+              <%= link_to "Browse packages", ecosystem_packages_path(ecosystem), class: "btn btn-outline-primary btn-sm" %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="alert alert-info" role="alert">
+      <h4 class="alert-heading">No Packages Found</h4>
+      <p>No packages have been imported yet. Try running the GHArchive import task to populate package data:</p>
+      <hr>
+      <p class="mb-0">
+        <code>rake gharchive:test_import</code>
+      </p>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  issue: one
+  package: one
+  old_version: MyString
+  new_version: MyString
+  path: MyString
+  update_type: MyString
+
+two:
+  issue: two
+  package: two
+  old_version: MyString
+  new_version: MyString
+  path: MyString
+  update_type: MyString

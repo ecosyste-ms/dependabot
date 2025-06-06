@@ -51,6 +51,14 @@ Rails.application.routes.draw do
 
   get '/dependabot', to: 'issues#dependabot', as: :dependabot
 
+  resources :packages, only: [:index] do
+    collection do
+      get 'search'
+      get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
+      get ':ecosystem/*name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/ }
+    end
+  end
+
   resources :exports, only: [:index], path: 'open-data'
 
   get '/404', to: 'errors#not_found'

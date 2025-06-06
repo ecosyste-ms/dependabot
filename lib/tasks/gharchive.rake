@@ -145,6 +145,60 @@ namespace :gharchive do
   
   private
   
+  def map_github_pr_data(pr_data, repository)
+    # Common mapping logic for all PR data
+    {
+      node_id: pr_data['node_id'],
+      number: pr_data['number'],
+      title: pr_data['title'],
+      body: pr_data['body'],
+      state: pr_data['state'],
+      locked: pr_data['locked'] || false,
+      comments_count: pr_data['comments'] || 0,
+      created_at: Time.parse(pr_data['created_at']),
+      updated_at: Time.parse(pr_data['updated_at']),
+      closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
+      user: pr_data['user']['login'],
+      labels: (pr_data['labels'] || []).map { |l| l['name'] },
+      assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
+      pull_request: true,
+      author_association: pr_data['author_association'],
+      state_reason: pr_data['state_reason'],
+      merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
+      draft: pr_data['draft'],
+      mergeable: pr_data['mergeable'],
+      mergeable_state: pr_data['mergeable_state'],
+      rebaseable: pr_data['rebaseable'],
+      review_comments_count: pr_data['review_comments'] || 0,
+      commits_count: pr_data['commits'] || 0,
+      additions: pr_data['additions'] || 0,
+      deletions: pr_data['deletions'] || 0,
+      changed_files: pr_data['changed_files'] || 0,
+      host_id: repository.host_id
+    }
+  end
+  
+  def save_issue_with_metadata(issue, was_new, created_count, updated_count)
+    # Calculate time to close if closed
+    if issue.closed_at.present?
+      issue.time_to_close = issue.closed_at - issue.created_at
+    end
+    
+    # Save the issue
+    if issue.save
+      # Update Dependabot metadata after saving
+      issue.update_dependabot_metadata
+      
+      if was_new
+        created_count += 1
+      else
+        updated_count += 1
+      end
+    end
+    
+    [created_count, updated_count]
+  end
+  
   def import_hour_with_stats(datetime)
     # Wrapper that returns structured stats for batch processing
     begin
@@ -215,42 +269,10 @@ namespace :gharchive do
           was_new = issue.new_record?
           
           # Map the GitHub data to our issue format
-          issue.assign_attributes(
-            node_id: pr_data['node_id'],
-            number: pr_data['number'],
-            title: pr_data['title'],
-            state: pr_data['state'],
-            locked: pr_data['locked'] || false,
-            comments_count: pr_data['comments'] || 0,
-            created_at: Time.parse(pr_data['created_at']),
-            updated_at: Time.parse(pr_data['updated_at']),
-            closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
-            user: pr_data['user']['login'],
-            labels: (pr_data['labels'] || []).map { |l| l['name'] },
-            assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
-            pull_request: true,
-            author_association: pr_data['author_association'],
-            state_reason: pr_data['state_reason'],
-            merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
-            host_id: repository.host_id
-          )
+          issue.assign_attributes(map_github_pr_data(pr_data, repository))
           
-          # Parse Dependabot metadata (reuse existing method)
-          issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
-          
-          # Calculate time to close if closed
-          if issue.closed_at.present?
-            issue.time_to_close = issue.closed_at - issue.created_at
-          end
-          
-          # Save the issue
-          if issue.save
-            if was_new
-              created_count += 1
-            else
-              updated_count += 1
-            end
-          end
+          # Save and update counts
+          created_count, updated_count = save_issue_with_metadata(issue, was_new, created_count, updated_count)
           
         elsif event_type == 'IssueCommentEvent'
           # For comments, check if it's on a pull request
@@ -273,40 +295,14 @@ namespace :gharchive do
           else
             # Create missing PR from comment event
             issue = repository.issues.find_or_initialize_by(uuid: issue_data['id'])
+            was_new = issue.new_record?
             
             # Map issue data to our format (similar to PR data mapping)
-            issue.assign_attributes(
-              node_id: issue_data['node_id'],
-              number: issue_data['number'],
-              title: issue_data['title'],
-              state: issue_data['state'],
-              locked: issue_data['locked'] || false,
-              comments_count: issue_data['comments'] || 0,
-              created_at: Time.parse(issue_data['created_at']),
-              updated_at: Time.parse(issue_data['updated_at']),
-              closed_at: issue_data['closed_at'] ? Time.parse(issue_data['closed_at']) : nil,
-              user: issue_data['user']['login'],
-              labels: (issue_data['labels'] || []).map { |l| l['name'] },
-              assignees: (issue_data['assignees'] || []).map { |a| a['login'] },
-              pull_request: true, # We know it's a PR from the check above
-              author_association: issue_data['author_association'],
-              state_reason: issue_data['state_reason'],
-              host_id: repository.host_id
-            )
+            issue.assign_attributes(map_github_pr_data(issue_data, repository))
             
-            # Parse Dependabot metadata
-            issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
-            
-            # Calculate time to close if closed
-            if issue.closed_at.present?
-              issue.time_to_close = issue.closed_at - issue.created_at
-            end
-            
-            # Save the issue
-            if issue.save
-              created_count += 1
-              comment_count += 1
-            end
+            # Save and update counts
+            created_count, updated_count = save_issue_with_metadata(issue, was_new, created_count, updated_count)
+            comment_count += 1 if was_new
           end
           
         elsif event_type == 'PullRequestReviewEvent'
@@ -445,28 +441,7 @@ namespace :gharchive do
     issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
     
     # Map PR data to our format
-    issue.assign_attributes(
-      node_id: pr_data['node_id'],
-      number: pr_data['number'],
-      title: pr_data['title'],
-      state: pr_data['state'],
-      locked: pr_data['locked'] || false,
-      comments_count: pr_data['comments'] || 0,
-      created_at: Time.parse(pr_data['created_at']),
-      updated_at: Time.parse(pr_data['updated_at']),
-      closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
-      user: pr_data['user']['login'],
-      labels: (pr_data['labels'] || []).map { |l| l['name'] },
-      assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
-      pull_request: true,
-      author_association: pr_data['author_association'],
-      state_reason: pr_data['state_reason'],
-      merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
-      host_id: repository.host_id
-    )
-    
-    # Parse Dependabot metadata
-    issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
+    issue.assign_attributes(map_github_pr_data(pr_data, repository))
     
     # Calculate time to close if closed
     if issue.closed_at.present?
@@ -475,6 +450,8 @@ namespace :gharchive do
     
     # Save and return the issue
     if issue.save
+      # Update Dependabot metadata after saving
+      issue.update_dependabot_metadata
       issue
     else
       puts "Failed to save issue from review event #{pr_data['id']}: #{issue.errors.full_messages.join(', ')}"

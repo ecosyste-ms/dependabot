@@ -26,8 +26,9 @@
             </h1>
           </div>
           <div class="flex-shrink-0">
-            <span class="badge bg-<%= @issue.state == 'open' ? 'success' : 'secondary' %> fs-6">
-              <%= @issue.state.capitalize %>
+            <% effective_state = @issue.effective_state %>
+            <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> fs-6">
+              <%= effective_state.capitalize %>
             </span>
           </div>
         </div>
@@ -38,10 +39,11 @@
               <strong>Number:</strong> #<%= @issue.number %><br>
               <strong>Type:</strong> <%= @issue.pull_request ? 'Pull Request' : 'Issue' %><br>
               <strong>State:</strong> 
-              <span class="badge bg-<%= @issue.state == 'open' ? 'success' : 'secondary' %>">
-                <%= @issue.state.capitalize %>
+              <% effective_state = @issue.effective_state %>
+              <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %>">
+                <%= effective_state.capitalize %>
               </span>
-              <% if @issue.state_reason %>
+              <% if @issue.state_reason && effective_state != 'merged' %>
                 (<%= @issue.state_reason.humanize %>)
               <% end %>
             </div>
@@ -117,72 +119,158 @@
             </div>
           <% end %>
 
+          <% if @issue.body.present? %>
+            <div class="mb-3">
+              <strong>Description:</strong>
+              <div class="mt-2 p-3 bg-light rounded">
+                <%= simple_format(@issue.body) %>
+              </div>
+            </div>
+          <% end %>
+
           <% if @issue.locked %>
             <div class="alert alert-warning mb-3">
               <%= octicon "lock", class: "me-2" %>
               This <%= @issue.pull_request ? 'pull request' : 'issue' %> is locked.
             </div>
           <% end %>
+
+          <% if @issue.draft %>
+            <div class="alert alert-info mb-3">
+              <%= octicon "git-pull-request-draft", class: "me-2" %>
+              This is a draft pull request.
+            </div>
+          <% end %>
         </div>
       </div>
 
-      <!-- Dependabot Metadata -->
-      <% if @issue.dependency_metadata.present? %>
+      <!-- Pull Request Statistics -->
+      <% if @issue.pull_request && (@issue.commits_count || @issue.additions || @issue.deletions || @issue.changed_files) %>
         <div class="card mb-4">
           <div class="card-header">
             <h5 class="mb-0">
-              <%= octicon "package", class: "me-2" %>
-              Dependency Information
+              <%= octicon "diff", class: "me-2" %>
+              Pull Request Statistics
             </h5>
           </div>
           <div class="card-body">
-            <% metadata = @issue.dependency_metadata %>
-            
             <div class="row">
-              <% if metadata['package_name'] %>
-                <div class="col-md-6 mb-3">
-                  <strong>Package:</strong><br>
-                  <code><%= metadata['package_name'] %></code>
+              <% if @issue.commits_count %>
+                <div class="col-md-3 mb-2">
+                  <strong>Commits:</strong><br>
+                  <%= octicon "git-commit", class: "me-1" %>
+                  <%= @issue.commits_count %>
                 </div>
               <% end %>
               
-              <% if metadata['ecosystem'] %>
-                <div class="col-md-6 mb-3">
-                  <strong>Ecosystem:</strong><br>
-                  <span class="badge bg-primary"><%= metadata['ecosystem'] %></span>
+              <% if @issue.changed_files %>
+                <div class="col-md-3 mb-2">
+                  <strong>Files Changed:</strong><br>
+                  <%= octicon "file", class: "me-1" %>
+                  <%= @issue.changed_files %>
                 </div>
               <% end %>
               
-              <% if metadata['previous_version'] %>
-                <div class="col-md-6 mb-3">
-                  <strong>Previous Version:</strong><br>
-                  <code><%= metadata['previous_version'] %></code>
+              <% if @issue.additions %>
+                <div class="col-md-3 mb-2">
+                  <strong>Additions:</strong><br>
+                  <span class="text-success">
+                    <%= octicon "plus", class: "me-1" %>
+                    +<%= @issue.additions %>
+                  </span>
                 </div>
               <% end %>
               
-              <% if metadata['new_version'] %>
-                <div class="col-md-6 mb-3">
-                  <strong>New Version:</strong><br>
-                  <code><%= metadata['new_version'] %></code>
-                </div>
-              <% end %>
-              
-              <% if metadata['update_type'] %>
-                <div class="col-md-6 mb-3">
-                  <strong>Update Type:</strong><br>
-                  <span class="badge bg-<%= metadata['update_type'] == 'major' ? 'warning' : metadata['update_type'] == 'minor' ? 'info' : 'success' %>">
-                    <%= metadata['update_type'].capitalize %>
+              <% if @issue.deletions %>
+                <div class="col-md-3 mb-2">
+                  <strong>Deletions:</strong><br>
+                  <span class="text-danger">
+                    <%= octicon "dash", class: "me-1" %>
+                    -<%= @issue.deletions %>
                   </span>
                 </div>
               <% end %>
             </div>
 
-            <% if metadata.keys.any? { |k| !%w[package_name ecosystem previous_version new_version update_type].include?(k) } %>
-              <details class="mt-3">
-                <summary class="text-muted">Raw Metadata</summary>
-                <pre class="mt-2 p-3 bg-light rounded"><%= JSON.pretty_generate(metadata) %></pre>
-              </details>
+            <% if @issue.review_comments_count && @issue.review_comments_count > 0 %>
+              <div class="mt-3">
+                <strong>Review Comments:</strong>
+                <%= octicon "comment-discussion", class: "me-1" %>
+                <%= @issue.review_comments_count %>
+              </div>
             <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Package Dependencies -->
+      <% if @issue.packages.any? %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <%= octicon "package", class: "me-2" %>
+              Package Dependencies
+            </h5>
+          </div>
+          <div class="card-body">
+            <% @issue.issue_packages.includes(:package).each do |issue_package| %>
+              <div class="border rounded p-3 mb-3">
+                <div class="row">
+                  <div class="col-md-6 mb-2">
+                    <strong>Package:</strong><br>
+                    <%= link_to show_packages_path(issue_package.package.ecosystem, issue_package.package.name), class: "text-decoration-none" do %>
+                      <code><%= issue_package.package.name %></code>
+                    <% end %>
+                  </div>
+                  
+                  <div class="col-md-6 mb-2">
+                    <strong>Ecosystem:</strong><br>
+                    <span class="badge bg-primary"><%= issue_package.package.ecosystem %></span>
+                  </div>
+                  
+                  <% if issue_package.old_version && issue_package.new_version %>
+                    <div class="col-md-6 mb-2">
+                      <strong>Version Change:</strong><br>
+                      <code><%= issue_package.version_change %></code>
+                    </div>
+                  <% end %>
+                  
+                  <% if issue_package.update_type %>
+                    <div class="col-md-6 mb-2">
+                      <strong>Update Type:</strong><br>
+                      <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : 'success' %>">
+                        <%= issue_package.update_type.capitalize %>
+                      </span>
+                    </div>
+                  <% end %>
+                  
+                  <% if issue_package.path %>
+                    <div class="col-12 mb-2">
+                      <strong>Path:</strong><br>
+                      <code><%= issue_package.path %></code>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Legacy Dependency Metadata (for debugging) -->
+      <% if @issue.dependency_metadata.present? %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h6 class="mb-0">
+              <%= octicon "bug", class: "me-2" %>
+              Legacy Dependency Metadata
+            </h6>
+          </div>
+          <div class="card-body">
+            <details>
+              <summary class="text-muted">Click to expand raw metadata</summary>
+              <pre class="mt-2 p-3 bg-light rounded"><%= JSON.pretty_generate(@issue.dependency_metadata) %></pre>
+            </details>
           </div>
         </div>
       <% end %>
@@ -219,6 +307,10 @@
         <div class="card-body">
           <table class="table table-sm mb-0">
             <tr>
+              <td><strong>ID:</strong></td>
+              <td><code><%= @issue.id %></code></td>
+            </tr>
+            <tr>
               <td><strong>UUID:</strong></td>
               <td><code><%= @issue.uuid %></code></td>
             </tr>
@@ -234,32 +326,62 @@
               <td><strong>Repository:</strong></td>
               <td><%= @repository.full_name %></td>
             </tr>
+            <% if @issue.pull_request %>
+              <% if @issue.mergeable.present? %>
+                <tr>
+                  <td><strong>Mergeable:</strong></td>
+                  <td>
+                    <% if @issue.mergeable %>
+                      <span class="badge bg-success">Yes</span>
+                    <% else %>
+                      <span class="badge bg-danger">No</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+              <% if @issue.mergeable_state.present? %>
+                <tr>
+                  <td><strong>Merge State:</strong></td>
+                  <td><%= @issue.mergeable_state.humanize %></td>
+                </tr>
+              <% end %>
+              <% if @issue.rebaseable.present? %>
+                <tr>
+                  <td><strong>Rebaseable:</strong></td>
+                  <td>
+                    <% if @issue.rebaseable %>
+                      <span class="badge bg-success">Yes</span>
+                    <% else %>
+                      <span class="badge bg-warning">No</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% end %>
           </table>
         </div>
       </div>
 
-      <% if @issue.user.include?('[bot]') %>
-        <div class="card">
-          <div class="card-header">
-            <h6 class="mb-0">Bot Information</h6>
-          </div>
-          <div class="card-body">
-            <p class="mb-2">
-              <%= octicon "hubot", class: "me-2" %>
-              This <%= @issue.pull_request ? 'pull request' : 'issue' %> was created by a bot.
-            </p>
-            
-            <% if @issue.user == 'dependabot[bot]' %>
-              <div class="alert alert-info mb-0">
-                <small>
-                  <strong>Dependabot</strong> automatically creates pull requests to update dependencies 
-                  when new versions are available. These updates help keep your project secure and up-to-date.
-                </small>
-              </div>
-            <% end %>
-          </div>
+    </div>
+  </div>
+
+  <!-- Debug Section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <%= octicon "bug", class: "me-2" %>
+            Debug: Complete Issue Record
+          </h6>
         </div>
-      <% end %>
+        <div class="card-body">
+          <details>
+            <summary class="text-muted mb-3">Click to expand full database record</summary>
+            <pre class="bg-light p-3 rounded mt-3" style="font-size: 0.8rem; overflow-x: auto;"><%= JSON.pretty_generate(@issue.attributes) %></pre>
+          </details>
+        </div>
+      </div>
     </div>
   </div>
 </div>
