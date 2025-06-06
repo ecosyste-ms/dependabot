@@ -419,6 +419,27 @@ class IssueTest < ActiveSupport::TestCase
     assert_nil metadata[:packages][0][:new_version]
   end
 
+  test "infers github actions ecosystem from path" do
+    issue = Issue.new(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Bump actions/setup-node from 3 to 4 in /.github/workflows",
+      number: 1,
+      state: "open",
+      labels: [] # No ecosystem labels to test path-based inference
+    )
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "actions/setup-node", metadata[:packages][0][:name]
+    assert_equal "3", metadata[:packages][0][:old_version]
+    assert_equal "4", metadata[:packages][0][:new_version]
+    assert_equal "/.github/workflows", metadata[:path]
+    assert_equal "actions", metadata[:ecosystem]
+  end
+
   test "returns nil for non-dependabot users" do
     issue = Issue.new(
       repository: @repository,

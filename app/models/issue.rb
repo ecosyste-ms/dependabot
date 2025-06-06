@@ -132,7 +132,7 @@ class Issue < ApplicationRecord
           new_version: single_match[:new_version]
         }],
         path: single_match[:path],
-        ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        ecosystem: infer_ecosystem_from_path(single_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
       }
     end
     
@@ -162,7 +162,7 @@ class Issue < ApplicationRecord
         prefix: multi_match[:prefix],
         packages: packages,
         path: multi_match[:path],
-        ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        ecosystem: infer_ecosystem_from_path(multi_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
       }
     end
     
@@ -183,7 +183,7 @@ class Issue < ApplicationRecord
             new_version: version_match[:new_version]
           }],
           path: single_no_version_match[:path],
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(single_no_version_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       end
     end
@@ -206,7 +206,7 @@ class Issue < ApplicationRecord
           update_count: update_count,
           packages: packages,
           path: path,
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(path, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       else
         # For group updates without parseable package details, return basic info
@@ -216,7 +216,7 @@ class Issue < ApplicationRecord
           update_count: update_count,
           packages: [],
           path: path,
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(path, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       end
     end
@@ -238,7 +238,7 @@ class Issue < ApplicationRecord
             new_version: requirement_from_to_match[:new_version].strip
           }],
           path: requirement_from_to_match[:path],
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(requirement_from_to_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       end
       
@@ -251,7 +251,7 @@ class Issue < ApplicationRecord
             name: requirement_to_match[:package_name],
             new_version: requirement_to_match[:new_version]
           }],
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       end
     end
@@ -268,7 +268,7 @@ class Issue < ApplicationRecord
           name: version_range_match[:package_name],
           new_version: versions.last
         }],
-        ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
       }
     end
     
@@ -288,7 +288,7 @@ class Issue < ApplicationRecord
             old_version: version_match[:old_version],
             new_version: version_match[:new_version]
           }],
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       else
         # Return basic info even without version details
@@ -297,7 +297,7 @@ class Issue < ApplicationRecord
           packages: [{
             name: package_name
           }],
-          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
         }
       end
     end
@@ -382,6 +382,18 @@ class Issue < ApplicationRecord
   end
   
   private
+  
+  def infer_ecosystem_from_path(path, label_ecosystem)
+    # Try to infer ecosystem from path if labels don't provide it
+    return label_ecosystem if label_ecosystem
+    
+    case path
+    when '/.github/workflows'
+      'actions'
+    else
+      nil
+    end
+  end
   
   def create_package_associations(metadata)
     return unless metadata[:ecosystem] && metadata[:packages]
