@@ -189,9 +189,13 @@ class Issue < ApplicationRecord
     end
     
     # Try group updates with table in body
-    group_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:the\s+)?(?<group_name>[\w_-]+) group (?:across \d+ director(?:y|ies) )?(?:in (?<path>[^\s]+) )?with (?<update_count>\d+) updates?$/i)
+    group_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:the\s+)?(?<group_name>[\w_-]+) group (?:across \d+ director(?:y|ies) )?(?:with (?<update_count>\d+) updates?(?:\s+in (?<path>.+?))?|(?:in (?<path2>[^\s]+) )?with (?<update_count2>\d+) updates?)$/i)
     
     if group_match && body.present?
+      # Handle both "with X updates in path" and "in path with X updates" formats
+      update_count = (group_match[:update_count] || group_match[:update_count2]).to_i
+      path = group_match[:path] || group_match[:path2]
+      
       # Parse markdown table from body
       packages = parse_group_update_table(body)
       
@@ -199,9 +203,9 @@ class Issue < ApplicationRecord
         return {
           prefix: group_match[:prefix],
           group_name: group_match[:group_name],
-          update_count: group_match[:update_count].to_i,
+          update_count: update_count,
           packages: packages,
-          path: group_match[:path],
+          path: path,
           ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
         }
       else
@@ -209,9 +213,9 @@ class Issue < ApplicationRecord
         return {
           prefix: group_match[:prefix],
           group_name: group_match[:group_name],
-          update_count: group_match[:update_count].to_i,
+          update_count: update_count,
           packages: [],
-          path: group_match[:path],
+          path: path,
           ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
         }
       end
@@ -219,41 +223,27 @@ class Issue < ApplicationRecord
     
     # Try requirement update formats
     if title.include?(" requirement ")
-      # Format: "Update package requirement from X to Y"
-      if title.start_with?("Update ") && title.include?(" requirement from ") && title.include?(" to ")
-        parts = title.split(" requirement from ")
-        if parts.length == 2
-          package_name = parts[0].sub("Update ", "")
-          version_and_path = parts[1]
-          
-          if version_and_path.include?(" to ")
-            version_parts = version_and_path.split(" to ")
-            old_version = version_parts[0]
-            remaining = version_parts[1]
-            
-            if remaining.include?(" in ")
-              new_version, path = remaining.split(" in ", 2)
-            else
-              new_version = remaining
-              path = nil
-            end
-            
-            return {
-              prefix: "Update",
-              packages: [{
-                name: package_name,
-                old_version: old_version,
-                new_version: new_version
-              }],
-              path: path,
-              ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
-            }
-          end
-        end
+      # Format: "Update package requirement from X to Y" (handles complex version ranges)
+      requirement_from_to_match = title.match(/^(?<prefix>.*?)(?<update_word>Update|update) (?<package_name>\S+) requirement from (?<old_version>.+?) to (?<new_version>.+?)(?:\s+in (?<path>.+?))?$/i)
+      if requirement_from_to_match
+        prefix = requirement_from_to_match[:prefix].present? ? 
+                 requirement_from_to_match[:prefix] + requirement_from_to_match[:update_word] :
+                 requirement_from_to_match[:update_word]
+        
+        return {
+          prefix: prefix,
+          packages: [{
+            name: requirement_from_to_match[:package_name],
+            old_version: requirement_from_to_match[:old_version].strip,
+            new_version: requirement_from_to_match[:new_version].strip
+          }],
+          path: requirement_from_to_match[:path],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
       end
       
       # Format: "Update package requirement to X"
-      requirement_to_match = title.match(/^(?<prefix>.*?)Update (?<package_name>\S+) requirement to (?<new_version>\S+)$/i)
+      requirement_to_match = title.match(/^(?<prefix>.*?)(?:Update|update) (?<package_name>\S+) requirement to (?<new_version>\S+)$/i)
       if requirement_to_match
         return {
           prefix: requirement_to_match[:prefix],
@@ -280,6 +270,36 @@ class Issue < ApplicationRecord
         }],
         ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
       }
+    end
+    
+    # Try simple bump format: "bump package" or "all: bump package"
+    simple_bump_match = title.match(/^(?<prefix>.*?)(?:bump|Bump)\s+(?<package_name>\S+)$/i)
+    
+    if simple_bump_match && body.present?
+      package_name = simple_bump_match[:package_name]
+      # Look for version information in body
+      version_match = body.match(/Updates `#{Regexp.escape(package_name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
+      
+      if version_match
+        return {
+          prefix: simple_bump_match[:prefix] + "bump",
+          packages: [{
+            name: package_name,
+            old_version: version_match[:old_version],
+            new_version: version_match[:new_version]
+          }],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
+      else
+        # Return basic info even without version details
+        return {
+          prefix: simple_bump_match[:prefix] + "bump",
+          packages: [{
+            name: package_name
+          }],
+          ecosystem: DEPENDABOT_ECOSYSTEMS[ecosystem.first],
+        }
+      end
     end
     
     nil

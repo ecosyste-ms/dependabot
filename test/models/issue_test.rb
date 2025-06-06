@@ -168,7 +168,7 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal "Bumps", metadata[:prefix]
     assert_equal "minor-patch-dependencies", metadata[:group_name]
     assert_equal 5, metadata[:update_count]
-    assert_equal "/ directory", metadata[:path]
+    assert_equal "the / directory", metadata[:path]
     assert_equal 5, metadata[:packages].length
     
     # Check first package
@@ -205,6 +205,33 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal "com.google.cloud.opentelemetry:exporter-trace", metadata[:packages][0][:name]
     assert_equal "0.34.0", metadata[:packages][0][:old_version]
     assert_equal "0.35.0", metadata[:packages][0][:new_version]
+  end
+
+  test "parses group updates with individual update lines" do
+    title = "fix(deps): bump the production-dependencies group across 1 directory with 2 updates"
+    body = <<~BODY
+      Bumps the production-dependencies group with 2 updates in the / directory: [commander](https://github.com/tj/commander.js) and [form-data](https://github.com/form-data/form-data).
+
+      Updates `commander` from 12.1.0 to 14.0.0
+      Updates `form-data` from 4.0.2 to 4.0.3
+    BODY
+    
+    issue = create_dependabot_issue_with_body(title, body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "fix(deps): bump", metadata[:prefix]
+    assert_equal "production-dependencies", metadata[:group_name]
+    assert_equal 2, metadata[:update_count]
+    assert_equal 2, metadata[:packages].length
+    
+    # Check packages
+    assert_equal "commander", metadata[:packages][0][:name]
+    assert_equal "12.1.0", metadata[:packages][0][:old_version]
+    assert_equal "14.0.0", metadata[:packages][0][:new_version]
+    
+    assert_equal "form-data", metadata[:packages][1][:name]
+    assert_equal "4.0.2", metadata[:packages][1][:old_version]
+    assert_equal "4.0.3", metadata[:packages][1][:new_version]
   end
 
   test "parses various group update title formats" do
@@ -245,6 +272,151 @@ class IssueTest < ActiveSupport::TestCase
     metadata = issue.parse_dependabot_metadata
     
     assert_nil metadata
+  end
+
+  test "parses terraform requirement format" do
+    issue = Issue.new(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Update hashicorp/azurerm requirement from ~> 4.31.0 to ~> 4.32.0 in /terraform",
+      number: 1,
+      state: "open",
+      labels: ["terraform"]
+    )
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "hashicorp/azurerm", metadata[:packages][0][:name]
+    assert_equal "~> 4.31.0", metadata[:packages][0][:old_version]
+    assert_equal "~> 4.32.0", metadata[:packages][0][:new_version]
+    assert_equal "/terraform", metadata[:path]
+  end
+
+  test "parses version range format" do
+    issue = create_dependabot_issue("Bump Velopack to 0.0.1251, 0.0.1297")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "Velopack", metadata[:packages][0][:name]
+    assert_equal "0.0.1297", metadata[:packages][0][:new_version] # Should use last version
+    assert_nil metadata[:packages][0][:old_version]
+  end
+
+  test "parses deps prefix format" do
+    issue = create_dependabot_issue("(deps)Update Cake.Http to 5.0.0")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "(deps)Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "Cake.Http", metadata[:packages][0][:name]
+    assert_equal "5.0.0", metadata[:packages][0][:new_version]
+  end
+
+  test "parses single package without version in title" do
+    body = "Updates `cross-spawn` from 7.0.3 to 7.0.6\n<details>...</details>"
+    issue = create_dependabot_issue_with_body("Bump cross-spawn", body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "cross-spawn", metadata[:packages][0][:name]
+    assert_equal "7.0.3", metadata[:packages][0][:old_version]
+    assert_equal "7.0.6", metadata[:packages][0][:new_version]
+  end
+
+  test "parses requirement update format" do
+    issue = create_dependabot_issue("[main] (deps): Update dotnet/arcade requirement to fdcda9b4919dd16bd2388b5421cc5d55afac0e88")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "[main] (deps): ", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "dotnet/arcade", metadata[:packages][0][:name]
+    assert_equal "fdcda9b4919dd16bd2388b5421cc5d55afac0e88", metadata[:packages][0][:new_version]
+    assert_nil metadata[:packages][0][:old_version]
+  end
+
+  test "parses group updates with performed updates format" do
+    title = "Bump the microsoftentityframework group with 1 update"
+    body = <<~BODY
+      Performed the following updates:
+      - Updated Microsoft.NET.Test.Sdk from 17.13.0 to 17.14.1 in /net/QACoverTest/QACoverTest.csproj
+      - Updated Microsoft.NET.Test.Sdk from 17.13.0 to 17.14.1 in /net/QACoverTestEf/QACoverTestEf.csproj
+    BODY
+    
+    issue = create_dependabot_issue_with_body(title, body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal "microsoftentityframework", metadata[:group_name]
+    assert_equal 1, metadata[:update_count]
+    assert_equal 2, metadata[:packages].length
+    
+    assert_equal "Microsoft.NET.Test.Sdk", metadata[:packages][0][:name]
+    assert_equal "17.13.0", metadata[:packages][0][:old_version]
+    assert_equal "17.14.1", metadata[:packages][0][:new_version]
+    assert_equal "/net/QACoverTest/QACoverTest.csproj", metadata[:packages][0][:path]
+  end
+
+  test "parses group updates without package details" do
+    body = "Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself."
+    issue = create_dependabot_issue_with_body("chore(deps): bump the minor-patch group across 1 directory with 13 updates", body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "chore(deps): bump", metadata[:prefix]
+    assert_equal "minor-patch", metadata[:group_name]
+    assert_equal 13, metadata[:update_count]
+    assert_equal [], metadata[:packages]
+  end
+
+  test "parses complex group title with path" do
+    body = "Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself."
+    issue = create_dependabot_issue_with_body("chore(deps)(deps-dev): bump the development-dependencies group in /acr-image-promotion-action with 17 updates", body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "chore(deps)(deps-dev): bump", metadata[:prefix]
+    assert_equal "development-dependencies", metadata[:group_name]
+    assert_equal 17, metadata[:update_count]
+    assert_equal "/acr-image-promotion-action", metadata[:path]
+    assert_equal [], metadata[:packages]
+  end
+
+  test "parses complex version ranges with emoji" do
+    issue = create_dependabot_issue("🛠️(deps): Update hashicorp/azurerm requirement from >= 3.0.0, < 4.30.1 to >= 3.0.0, < 4.31.1 in /terraform")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "🛠️(deps): Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "hashicorp/azurerm", metadata[:packages][0][:name]
+    assert_equal ">= 3.0.0, < 4.30.1", metadata[:packages][0][:old_version]
+    assert_equal ">= 3.0.0, < 4.31.1", metadata[:packages][0][:new_version]
+    assert_equal "/terraform", metadata[:path]
+  end
+
+  test "parses lowercase update requirement format" do
+    issue = create_dependabot_issue("chore(deps): update hashicorp/azurerm requirement from ~> 3.116.0 to ~> 4.31.0 in /terraform")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "chore(deps): update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "hashicorp/azurerm", metadata[:packages][0][:name]
+    assert_equal "~> 3.116.0", metadata[:packages][0][:old_version]
+    assert_equal "~> 4.31.0", metadata[:packages][0][:new_version]
+    assert_equal "/terraform", metadata[:path]
+  end
+
+  test "parses simple bump format" do
+    body = "Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself."
+    issue = create_dependabot_issue_with_body("bump semver", body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "bump", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "semver", metadata[:packages][0][:name]
+    assert_nil metadata[:packages][0][:old_version]
+    assert_nil metadata[:packages][0][:new_version]
   end
 
   test "returns nil for non-dependabot users" do
