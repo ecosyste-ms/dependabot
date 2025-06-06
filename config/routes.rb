@@ -43,7 +43,7 @@ Rails.application.routes.draw do
       #   get 'charts', to: 'repositories#charts'
       #   get 'chart_data', to: 'repositories#chart_data'
       # end
-      resources :issues, constraints: { id: /.*/ }, only: [:index]
+      resources :issues, constraints: { id: /.*/ }, only: [:index, :show]
     end
     resources :authors, constraints: { id: /.*/ }, only: [:index, :show]
     resources :owners, constraints: { id: /.*/ }, only: [:index, :show]
@@ -57,5 +57,5 @@ Rails.application.routes.draw do
   get '/422', to: 'errors#unprocessable'
   get '/500', to: 'errors#internal'
 
-  root "hosts#index"
+  root "home#index"
 end

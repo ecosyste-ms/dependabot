@@ -6,11 +6,102 @@ namespace :gharchive do
   desc "Test import one hour of Dependabot PRs from GHArchive"
   task test_import: :environment do
     # Default to 1 hour ago if no hour specified
-    hour_ago = 1.hour.ago
+    hour_ago = 24.hour.ago
     
     puts "Testing GHArchive import for #{hour_ago.strftime('%Y-%m-%d-%H')}..."
     
-    import_hour(hour_ago)
+    result = import_hour_with_stats(hour_ago)
+    
+    if result[:success]
+      puts "\nImport complete!"
+      puts "- Total Dependabot PR events: #{result[:dependabot_count]}"
+      puts "- Pull request lifecycle events: #{result[:pr_count]}"
+      puts "- Comment updates: #{result[:comment_count]}"
+      puts "- Review events: #{result[:review_count]}"
+      puts "- Review comment events: #{result[:review_comment_count]}"
+      puts "- Review thread events: #{result[:review_thread_count]}"
+      puts "- Issues created: #{result[:created_count]}"
+      puts "- Issues updated: #{result[:updated_count]}"
+    else
+      puts "Import failed: #{result[:error]}"
+    end
+  end
+  
+  desc "Import past 24 hours of Dependabot PRs from GHArchive"
+  task import_24_hours: :environment do
+    puts "Importing past 24 hours of Dependabot PRs from GHArchive..."
+    
+    end_time = Time.now.utc
+    start_time = 24.hours.ago.utc
+    
+    total_hours = 24
+    successful_imports = 0
+    failed_imports = 0
+    total_events = 0
+    total_prs = 0
+    total_comments = 0
+    total_reviews = 0
+    total_review_comments = 0
+    total_review_threads = 0
+    total_created = 0
+    total_updated = 0
+    
+    puts "Importing from #{start_time.strftime('%Y-%m-%d %H:00 UTC')} to #{end_time.strftime('%Y-%m-%d %H:00 UTC')}"
+    puts "Processing #{total_hours} hours of data...\n"
+    
+    current_time = start_time.beginning_of_hour
+    
+    while current_time <= end_time
+      hour_str = current_time.strftime('%Y-%m-%d-%H')
+      print "Processing #{hour_str}... "
+      
+      begin
+        result = import_hour_with_stats(current_time)
+        
+        if result[:success]
+          successful_imports += 1
+          total_events += result[:dependabot_count]
+          total_prs += result[:pr_count] 
+          total_comments += result[:comment_count]
+          total_reviews += result[:review_count]
+          total_review_comments += result[:review_comment_count]
+          total_review_threads += result[:review_thread_count]
+          total_created += result[:created_count]
+          total_updated += result[:updated_count]
+          
+          puts "✅ #{result[:dependabot_count]} events, #{result[:created_count]} created, #{result[:updated_count]} updated"
+        else
+          failed_imports += 1
+          puts "❌ #{result[:error]}"
+        end
+        
+      rescue => e
+        failed_imports += 1
+        puts "❌ Exception: #{e.message}"
+      end
+      
+      current_time += 1.hour
+    end
+    
+    puts "\n" + "="*80
+    puts "24-Hour Import Summary"
+    puts "="*80
+    puts "Hours processed: #{total_hours}"
+    puts "Successful imports: #{successful_imports}"
+    puts "Failed imports: #{failed_imports}"
+    puts "Success rate: #{(successful_imports.to_f / total_hours * 100).round(1)}%"
+    puts ""
+    puts "Total Dependabot events: #{total_events}"
+    puts "- PR lifecycle events: #{total_prs}"
+    puts "- Comment updates: #{total_comments}"
+    puts "- Review events: #{total_reviews}"
+    puts "- Review comment events: #{total_review_comments}"
+    puts "- Review thread events: #{total_review_threads}"
+    puts ""
+    puts "Database changes:"
+    puts "- Issues created: #{total_created}"
+    puts "- Issues updated: #{total_updated}"
+    puts "="*80
   end
   
   desc "Import specific hour of Dependabot PRs from GHArchive (HOUR=2024-01-01-14)"
@@ -29,7 +120,22 @@ namespace :gharchive do
       
       puts "Importing GHArchive data for #{datetime.strftime('%Y-%m-%d %H:00 UTC')}..."
       
-      import_hour(datetime)
+      result = import_hour_with_stats(datetime)
+      
+      if result[:success]
+        puts "\nImport complete!"
+        puts "- Total Dependabot PR events: #{result[:dependabot_count]}"
+        puts "- Pull request lifecycle events: #{result[:pr_count]}"
+        puts "- Comment updates: #{result[:comment_count]}"
+        puts "- Review events: #{result[:review_count]}"
+        puts "- Review comment events: #{result[:review_comment_count]}"
+        puts "- Review thread events: #{result[:review_thread_count]}"
+        puts "- Issues created: #{result[:created_count]}"
+        puts "- Issues updated: #{result[:updated_count]}"
+      else
+        puts "Import failed: #{result[:error]}"
+        exit 1
+      end
     rescue => e
       puts "Error parsing hour '#{hour_string}': #{e.message}"
       puts "Expected format: YYYY-MM-DD-HH (e.g., 2024-01-01-14)"
@@ -39,30 +145,31 @@ namespace :gharchive do
   
   private
   
-  def import_hour(datetime)
-    filename = "#{datetime.year}-#{datetime.month.to_s.rjust(2, '0')}-#{datetime.day.to_s.rjust(2, '0')}-#{datetime.hour}.json.gz"
-    url = "http://data.gharchive.org/#{filename}"
-    
-    puts "Downloading #{url}..."
-    
+  def import_hour_with_stats(datetime)
+    # Wrapper that returns structured stats for batch processing
     begin
+      filename = "#{datetime.year}-#{datetime.month.to_s.rjust(2, '0')}-#{datetime.day.to_s.rjust(2, '0')}-#{datetime.hour}.json.gz"
+      url = "http://data.gharchive.org/#{filename}"
+      
       uri = URI(url)
       response = Net::HTTP.get_response(uri)
       
       if response.code != '200'
-        puts "Failed to download #{url}: HTTP #{response.code}"
-        return
+        return {
+          success: false,
+          error: "HTTP #{response.code}"
+        }
       end
-      
-      puts "Downloaded #{response.body.length} bytes, decompressing..."
       
       # Decompress the gzipped data
       decompressed_data = Zlib::GzipReader.new(StringIO.new(response.body)).read
       
-      puts "Decompressed to #{decompressed_data.length} bytes, processing events..."
-      
       dependabot_count = 0
       pr_count = 0
+      comment_count = 0
+      review_count = 0
+      review_comment_count = 0
+      review_thread_count = 0
       created_count = 0
       updated_count = 0
       
@@ -70,80 +177,241 @@ namespace :gharchive do
       decompressed_data.each_line do |line|
         event = JSON.parse(line.strip)
         
-        # Only process PullRequestEvent from dependabot[bot]
-        next unless event['type'] == 'PullRequestEvent'
-        next unless event['actor'] && event['actor']['login'] == 'dependabot[bot]'
+        # Only process PR-related events
+        pr_event_types = ['PullRequestEvent', 'IssueCommentEvent', 'PullRequestReviewEvent', 'PullRequestReviewCommentEvent', 'PullRequestReviewThreadEvent']
+        next unless pr_event_types.include?(event['type'])
         
-        dependabot_count += 1
-        
-        # Only process 'opened' actions for now (to avoid duplicates)
-        next unless event['payload']['action'] == 'opened'
-        
-        pr_count += 1
-        
-        # Extract the pull request data
-        pr_data = event['payload']['pull_request']
+        event_type = event['type']
         repo_name = event['repo']['name']
         
-        # Find or create the repository
-        repository = find_or_create_repository(repo_name)
-        next unless repository
-        
-        # Find or create the issue (PRs are stored as issues)
-        issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
-        
-        was_new = issue.new_record?
-        
-        # Map the GitHub data to our issue format
-        issue.assign_attributes(
-          node_id: pr_data['node_id'],
-          number: pr_data['number'],
-          title: pr_data['title'],
-          state: pr_data['state'],
-          locked: pr_data['locked'] || false,
-          comments_count: pr_data['comments'] || 0,
-          created_at: Time.parse(pr_data['created_at']),
-          updated_at: Time.parse(pr_data['updated_at']),
-          closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
-          user: pr_data['user']['login'],
-          labels: (pr_data['labels'] || []).map { |l| l['name'] },
-          assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
-          pull_request: true,
-          author_association: pr_data['author_association'],
-          state_reason: pr_data['state_reason'],
-          merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
-          host_id: repository.host_id
-        )
-        
-        # Parse Dependabot metadata (reuse existing method)
-        issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
-        
-        # Calculate time to close if closed
-        if issue.closed_at.present?
-          issue.time_to_close = issue.closed_at - issue.created_at
-        end
-        
-        # Save the issue
-        if issue.save
-          if was_new
-            created_count += 1
-          else
-            updated_count += 1
+        if event_type == 'PullRequestEvent'
+          # Process key PR lifecycle actions
+          allowed_actions = ['opened', 'closed', 'synchronize', 'reopened', 'edited']
+          action = event['payload']['action']
+          next unless allowed_actions.include?(action)
+          
+          # Extract the pull request data
+          pr_data = event['payload']['pull_request']
+          
+          # Only process PRs originally opened by Dependabot (check PR author, not event actor)
+          pr_author = pr_data['user']['login']
+          next unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
+          
+          dependabot_count += 1
+          pr_count += 1
+          
+          # Find or create the repository
+          repository = find_or_create_repository(repo_name)
+          next unless repository
+          
+          # Find or create the issue (PRs are stored as issues)
+          issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
+          
+          # Skip if this is an older event for an issue we already have
+          if issue.persisted? && issue.updated_at && issue.updated_at >= Time.parse(pr_data['updated_at'])
+            next
           end
-        else
-          puts "Failed to save issue #{pr_data['id']}: #{issue.errors.full_messages.join(', ')}"
+          
+          was_new = issue.new_record?
+          
+          # Map the GitHub data to our issue format
+          issue.assign_attributes(
+            node_id: pr_data['node_id'],
+            number: pr_data['number'],
+            title: pr_data['title'],
+            state: pr_data['state'],
+            locked: pr_data['locked'] || false,
+            comments_count: pr_data['comments'] || 0,
+            created_at: Time.parse(pr_data['created_at']),
+            updated_at: Time.parse(pr_data['updated_at']),
+            closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
+            user: pr_data['user']['login'],
+            labels: (pr_data['labels'] || []).map { |l| l['name'] },
+            assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
+            pull_request: true,
+            author_association: pr_data['author_association'],
+            state_reason: pr_data['state_reason'],
+            merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
+            host_id: repository.host_id
+          )
+          
+          # Parse Dependabot metadata (reuse existing method)
+          issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
+          
+          # Calculate time to close if closed
+          if issue.closed_at.present?
+            issue.time_to_close = issue.closed_at - issue.created_at
+          end
+          
+          # Save the issue
+          if issue.save
+            if was_new
+              created_count += 1
+            else
+              updated_count += 1
+            end
+          end
+          
+        elsif event_type == 'IssueCommentEvent'
+          # For comments, check if it's on a pull request
+          issue_data = event['payload']['issue']
+          next unless issue_data['pull_request'] # Only comments on PRs
+          
+          # Only process comments on PRs originally opened by Dependabot
+          pr_author = issue_data['user']['login']
+          next unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
+          
+          # For comments, we'll update the PR's comment count but won't create new issues
+          # Just find existing issue and update comment count
+          repository = find_or_create_repository(repo_name)
+          next unless repository
+          
+          existing_issue = repository.issues.find_by(uuid: issue_data['id'])
+          if existing_issue
+            existing_issue.update(comments_count: issue_data['comments'])
+            comment_count += 1
+          else
+            # Create missing PR from comment event
+            issue = repository.issues.find_or_initialize_by(uuid: issue_data['id'])
+            
+            # Map issue data to our format (similar to PR data mapping)
+            issue.assign_attributes(
+              node_id: issue_data['node_id'],
+              number: issue_data['number'],
+              title: issue_data['title'],
+              state: issue_data['state'],
+              locked: issue_data['locked'] || false,
+              comments_count: issue_data['comments'] || 0,
+              created_at: Time.parse(issue_data['created_at']),
+              updated_at: Time.parse(issue_data['updated_at']),
+              closed_at: issue_data['closed_at'] ? Time.parse(issue_data['closed_at']) : nil,
+              user: issue_data['user']['login'],
+              labels: (issue_data['labels'] || []).map { |l| l['name'] },
+              assignees: (issue_data['assignees'] || []).map { |a| a['login'] },
+              pull_request: true, # We know it's a PR from the check above
+              author_association: issue_data['author_association'],
+              state_reason: issue_data['state_reason'],
+              host_id: repository.host_id
+            )
+            
+            # Parse Dependabot metadata
+            issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
+            
+            # Calculate time to close if closed
+            if issue.closed_at.present?
+              issue.time_to_close = issue.closed_at - issue.created_at
+            end
+            
+            # Save the issue
+            if issue.save
+              created_count += 1
+              comment_count += 1
+            end
+          end
+          
+        elsif event_type == 'PullRequestReviewEvent'
+          # Handle PR review events (approved, changes_requested, commented, etc.)
+          pr_data = event['payload']['pull_request']
+          
+          # Only process reviews on PRs originally opened by Dependabot
+          pr_author = pr_data['user']['login']
+          next unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
+          
+          # Find or create the PR from review event
+          repository = find_or_create_repository(repo_name)
+          next unless repository
+          
+          existing_issue = repository.issues.find_by(uuid: pr_data['id'])
+          if existing_issue
+            # Update any relevant fields from the PR data
+            existing_issue.update(
+              comments_count: pr_data['comments'] || existing_issue.comments_count,
+              updated_at: Time.parse(pr_data['updated_at'])
+            )
+            review_count += 1
+          else
+            # Create missing PR from review event
+            issue = create_pr_from_data(repository, pr_data)
+            if issue&.persisted?
+              created_count += 1
+              review_count += 1
+            end
+          end
+          
+        elsif event_type == 'PullRequestReviewCommentEvent'
+          # Handle line-specific review comments
+          pr_data = event['payload']['pull_request']
+          
+          # Only process review comments on PRs originally opened by Dependabot
+          pr_author = pr_data['user']['login']
+          next unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
+          
+          # Find or create the PR from review comment event
+          repository = find_or_create_repository(repo_name)
+          next unless repository
+          
+          existing_issue = repository.issues.find_by(uuid: pr_data['id'])
+          if existing_issue
+            # Update comment count and updated_at
+            existing_issue.update(
+              comments_count: pr_data['comments'] || existing_issue.comments_count,
+              updated_at: Time.parse(pr_data['updated_at'])
+            )
+            review_comment_count += 1
+          else
+            # Create missing PR from review comment event
+            issue = create_pr_from_data(repository, pr_data)
+            if issue&.persisted?
+              created_count += 1
+              review_comment_count += 1
+            end
+          end
+          
+        elsif event_type == 'PullRequestReviewThreadEvent'
+          # Handle review thread events (resolved, unresolved)
+          pr_data = event['payload']['pull_request']
+          
+          # Only process review threads on PRs originally opened by Dependabot
+          pr_author = pr_data['user']['login']
+          next unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
+          
+          # Find or create the PR from review thread event
+          repository = find_or_create_repository(repo_name)
+          next unless repository
+          
+          existing_issue = repository.issues.find_by(uuid: pr_data['id'])
+          if existing_issue
+            # Update updated_at timestamp
+            existing_issue.update(updated_at: Time.parse(pr_data['updated_at']))
+            review_thread_count += 1
+          else
+            # Create missing PR from review thread event
+            issue = create_pr_from_data(repository, pr_data)
+            if issue&.persisted?
+              created_count += 1
+              review_thread_count += 1
+            end
+          end
         end
       end
       
-      puts "\nImport complete!"
-      puts "- Total Dependabot events: #{dependabot_count}"
-      puts "- Pull request 'opened' events: #{pr_count}"
-      puts "- Issues created: #{created_count}"
-      puts "- Issues updated: #{updated_count}"
+      return {
+        success: true,
+        dependabot_count: dependabot_count,
+        pr_count: pr_count,
+        comment_count: comment_count,
+        review_count: review_count,
+        review_comment_count: review_comment_count,
+        review_thread_count: review_thread_count,
+        created_count: created_count,
+        updated_count: updated_count
+      }
       
     rescue => e
-      puts "Error importing data: #{e.message}"
-      puts e.backtrace.first(5).join("\n")
+      return {
+        success: false,
+        error: e.message
+      }
     end
   end
   
@@ -165,12 +433,52 @@ namespace :gharchive do
       repository = Repository.create!(
         full_name: repo_name,
         owner: owner_name,
-        name: repo_name_only,
-        host: github_host,
-        private: false # Assume public since it's in GHArchive
+        host: github_host
       )
     end
     
     repository
+  end
+  
+  def create_pr_from_data(repository, pr_data)
+    # Create issue from PR data (reusable for all review events)
+    issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
+    
+    # Map PR data to our format
+    issue.assign_attributes(
+      node_id: pr_data['node_id'],
+      number: pr_data['number'],
+      title: pr_data['title'],
+      state: pr_data['state'],
+      locked: pr_data['locked'] || false,
+      comments_count: pr_data['comments'] || 0,
+      created_at: Time.parse(pr_data['created_at']),
+      updated_at: Time.parse(pr_data['updated_at']),
+      closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
+      user: pr_data['user']['login'],
+      labels: (pr_data['labels'] || []).map { |l| l['name'] },
+      assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
+      pull_request: true,
+      author_association: pr_data['author_association'],
+      state_reason: pr_data['state_reason'],
+      merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
+      host_id: repository.host_id
+    )
+    
+    # Parse Dependabot metadata
+    issue.parse_dependabot_metadata if issue.respond_to?(:parse_dependabot_metadata)
+    
+    # Calculate time to close if closed
+    if issue.closed_at.present?
+      issue.time_to_close = issue.closed_at - issue.created_at
+    end
+    
+    # Save and return the issue
+    if issue.save
+      issue
+    else
+      puts "Failed to save issue from review event #{pr_data['id']}: #{issue.errors.full_messages.join(', ')}"
+      nil
+    end
   end
 end

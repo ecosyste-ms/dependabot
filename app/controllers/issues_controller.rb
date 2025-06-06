@@ -7,6 +7,13 @@ class IssuesController < ApplicationController
     expires_in 1.hour, public: true
   end
 
+  def show
+    @host = Host.find_by_name!(params[:host_id])
+    @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:repository_id].downcase)
+    @issue = @repository.issues.find_by!(number: params[:id])
+    expires_in 1.hour, public: true
+  end
+
   def dependabot
     @host = Host.find_by_name!('GitHub')
     scope = @host.issues.dependabot.with_dependency_metadata.order('created_at DESC').includes(:repository)

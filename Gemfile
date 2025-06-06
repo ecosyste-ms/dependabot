@@ -60,3 +60,4 @@ group :test do
 end
 
 gem "bootstrap-icons-helper", "~> 2.0"
+gem "octicons_helper"
