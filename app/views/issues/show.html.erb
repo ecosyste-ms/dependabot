@@ -256,24 +256,6 @@
           </div>
         </div>
       <% end %>
-
-      <!-- Legacy Dependency Metadata (for debugging) -->
-      <% if @issue.dependency_metadata.present? %>
-        <div class="card mb-4">
-          <div class="card-header">
-            <h6 class="mb-0">
-              <%= octicon "bug", class: "me-2" %>
-              Legacy Dependency Metadata
-            </h6>
-          </div>
-          <div class="card-body">
-            <details>
-              <summary class="text-muted">Click to expand raw metadata</summary>
-              <pre class="mt-2 p-3 bg-light rounded"><%= JSON.pretty_generate(@issue.dependency_metadata) %></pre>
-            </details>
-          </div>
-        </div>
-      <% end %>
     </div>
 
     <!-- Sidebar -->
@@ -295,7 +277,7 @@
           
           <%= link_to [@host, @repository, :issues], class: "btn btn-outline-secondary w-100" do %>
             <%= octicon "issue-opened", class: "me-2" %>
-            All Issues
+            All Dependabot PRs
           <% end %>
         </div>
       </div>
@@ -362,26 +344,6 @@
         </div>
       </div>
 
-    </div>
-  </div>
-
-  <!-- Debug Section -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="mb-0">
-            <%= octicon "bug", class: "me-2" %>
-            Debug: Complete Issue Record
-          </h6>
-        </div>
-        <div class="card-body">
-          <details>
-            <summary class="text-muted mb-3">Click to expand full database record</summary>
-            <pre class="bg-light p-3 rounded mt-3" style="font-size: 0.8rem; overflow-x: auto;"><%= JSON.pretty_generate(@issue.attributes) %></pre>
-          </details>
-        </div>
-      </div>
     </div>
   </div>
 </div>
