@@ -7,6 +7,7 @@ class Package < ApplicationRecord
   validates :name, uniqueness: { scope: :ecosystem }
   
   scope :by_ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }
+  scope :without_metadata, -> { where("LENGTH(metadata::text) = 2") }
   
   # Mapping from GitHub ecosystem names to PURL type names
   # Based on https://github.com/package-url/purl-spec/blob/main/PURL-TYPES.rst
@@ -24,7 +25,7 @@ class Package < ApplicationRecord
     'packagist' => 'composer',
     'pub' => 'pub',
     'terraform' => 'terraform',
-    'actions' => 'github',  # GitHub Actions
+    'actions' => 'githubactions',  # GitHub Actions
     'elm' => 'elm',
     'swift' => 'swift',
     'cocoapods' => 'cocoapods',
@@ -62,7 +63,7 @@ class Package < ApplicationRecord
         data_array = JSON.parse(response.body)
         # API returns an array, we want the first item
         data = data_array.first || {}
-        
+        return {} if data.empty?
         # Update metadata and repository_url if available
         update_columns(
           metadata: data,

@@ -33,11 +33,11 @@
               <code><%= @package.purl %></code>
             </div>
             <div class="col-md-6 mb-3">
-              <strong>Total Updates:</strong><br>
-              <%= pluralize @package.issues_count, 'Dependabot update' %>
+              <strong>Total PRs:</strong><br>
+              <%= pluralize @package.issues_count, 'Dependabot PR' %>
             </div>
             <div class="col-md-6 mb-3">
-              <strong>Latest Update:</strong><br>
+              <strong>Latest PR:</strong><br>
               <% if @package.issues_count > 0 %>
                 <%= time_ago_in_words(@package.issues.maximum(:created_at)) %> ago
               <% else %>
@@ -52,7 +52,7 @@
         <div class="card-header">
           <h5 class="mb-0">
             <%= octicon "git-pull-request", class: "me-2" %>
-            Recent Updates
+            Recent PRs
           </h5>
         </div>
         <div class="card-body">
@@ -82,7 +82,7 @@
                       <% end %>
                       <% if issue_package.update_type %>
                         <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : 'success' %>">
-                          <%= issue_package.update_type.capitalize %> Update
+                          <%= issue_package.update_type.capitalize %> PR
                         </span>
                       <% end %>
                     </div>
@@ -113,8 +113,8 @@
             <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
           <% else %>
             <div class="alert alert-info" role="alert">
-              <h6 class="alert-heading">No Updates Found</h6>
-              <p class="mb-0">No Dependabot updates found for this package.</p>
+              <h6 class="alert-heading">No PRs Found</h6>
+              <p class="mb-0">No Dependabot PRs found for this package.</p>
             </div>
           <% end %>
         </div>
@@ -203,6 +203,13 @@
                   <td><%= number_with_delimiter(@package.metadata['dependent_repos_count']) %></td>
                 </tr>
               <% end %>
+
+              <% if @package.metadata['dependent_packages_count'] %>
+                <tr>
+                  <td><strong>Dependent Packages:</strong></td>
+                  <td><%= number_with_delimiter(@package.metadata['dependent_packages_count']) %></td>
+                </tr>
+              <% end %>
               
               <% if @package.metadata['downloads'] %>
                 <tr>
@@ -218,17 +225,17 @@
                     <% rankings = @package.metadata['rankings'] %>
                     <% if rankings['dependent_repos_count'] %>
                       <span class="badge bg-info me-1">
-                        #<%= number_with_delimiter(rankings['dependent_repos_count']) %> by dependents
+                        Top <%= number_with_delimiter(rankings['dependent_repos_count'].round(4)) %>% by dependent repos
                       </span>
                     <% end %>
                     <% if rankings['downloads'] %>
                       <span class="badge bg-success me-1">
-                        #<%= number_with_delimiter(rankings['downloads']) %> by downloads
+                        Top <%= number_with_delimiter(rankings['downloads'].round(4)) %>% by downloads
                       </span>
                     <% end %>
                     <% if rankings['dependent_packages_count'] %>
                       <span class="badge bg-warning me-1">
-                        #<%= number_with_delimiter(rankings['dependent_packages_count']) %> by packages
+                        Top <%= number_with_delimiter(rankings['dependent_packages_count'].round(4)) %>% by dependent pkgs
                       </span>
                     <% end %>
                   </td>
@@ -277,7 +284,7 @@
 
         <div class="card">
           <div class="card-header">
-            <h6 class="mb-0">Update Types</h6>
+            <h6 class="mb-0">PR Types</h6>
           </div>
           <div class="card-body">
             <% update_types = @package.issue_packages.group(:update_type).count %>
@@ -296,7 +303,7 @@
             <hr class="my-3">
             
             <div class="d-flex justify-content-between">
-              <strong>Total Updates:</strong>
+              <strong>Total PRs:</strong>
               <strong><%= @package.issues_count %></strong>
             </div>
           </div>
