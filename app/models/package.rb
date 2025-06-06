@@ -49,4 +49,67 @@ class Package < ApplicationRecord
   def to_param
     "#{ecosystem}/#{CGI.escape(name)}"
   end
+  
+  def fetch_metadata_from_ecosyste_ms
+    return metadata if metadata.present? && metadata != {}
+    
+    purl_encoded = CGI.escape(purl)
+    url = "https://packages.ecosyste.ms/api/v1/packages/lookup?purl=#{purl_encoded}"
+    
+    begin
+      response = Faraday.get(url)
+      if response.success?
+        data_array = JSON.parse(response.body)
+        # API returns an array, we want the first item
+        data = data_array.first || {}
+        
+        # Update metadata and repository_url if available
+        update_columns(
+          metadata: data,
+          repository_url: data['repository_url'] || repository_url
+        )
+        
+        data
+      else
+        Rails.logger.warn "Failed to fetch metadata for #{purl}: #{response.status}"
+        {}
+      end
+    rescue => e
+      Rails.logger.error "Error fetching metadata for #{purl}: #{e.message}"
+      {}
+    end
+  end
+  
+  def infer_ecosystem_from_metadata
+    return ecosystem if ecosystem.present?
+    
+    metadata_info = fetch_metadata_from_ecosyste_ms
+    
+    # Extract ecosystem from the PURL type in the metadata
+    if metadata_info['purl']
+      purl_parts = metadata_info['purl'].split(':')
+      if purl_parts.length >= 2
+        purl_type = purl_parts[1]
+        
+        # Map PURL types back to our ecosystem names
+        inferred_ecosystem = case purl_type
+        when 'npm' then 'npm'
+        when 'pypi' then 'pip'
+        when 'gem' then 'rubygems'
+        when 'maven' then 'maven'
+        when 'cargo' then 'cargo'
+        when 'nuget' then 'nuget'
+        when 'golang' then 'go'
+        when 'composer' then 'packagist'
+        when 'github' then 'actions'
+        else purl_type
+        end
+        
+        update_column(:ecosystem, inferred_ecosystem) if inferred_ecosystem != ecosystem
+        return inferred_ecosystem
+      end
+    end
+    
+    ecosystem
+  end
 end

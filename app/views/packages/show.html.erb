@@ -148,6 +148,97 @@
         </div>
       </div>
 
+      <% if @package.metadata.present? && @package.metadata != {} %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h6 class="mb-0">Package Information</h6>
+          </div>
+          <div class="card-body">
+            <% if @package.metadata['description'] %>
+              <div class="mb-3">
+                <strong>Description:</strong><br>
+                <p class="mb-0"><%= @package.metadata['description'] %></p>
+              </div>
+            <% end %>
+            
+            <table class="table table-sm mb-0">
+              <% if @package.repository_url %>
+                <tr>
+                  <td><strong>Repository:</strong></td>
+                  <td>
+                    <%= link_to @package.repository_url, @package.repository_url, target: "_blank", class: "text-decoration-none" %>
+                    <%= octicon "link-external", height: 12 %>
+                  </td>
+                </tr>
+              <% end %>
+              
+              <% if @package.metadata['homepage'] %>
+                <tr>
+                  <td><strong>Homepage:</strong></td>
+                  <td>
+                    <%= link_to @package.metadata['homepage'], @package.metadata['homepage'], target: "_blank", class: "text-decoration-none" %>
+                    <%= octicon "link-external", height: 12 %>
+                  </td>
+                </tr>
+              <% end %>
+              
+              <% if @package.metadata['latest_release_number'] %>
+                <tr>
+                  <td><strong>Latest Release:</strong></td>
+                  <td>
+                    <code><%= @package.metadata['latest_release_number'] %></code>
+                    <% if @package.metadata['latest_release_published_at'] %>
+                      <br>
+                      <small class="text-muted">
+                        <%= time_ago_in_words(Time.parse(@package.metadata['latest_release_published_at'])) %> ago
+                      </small>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+              
+              <% if @package.metadata['dependent_repos_count'] %>
+                <tr>
+                  <td><strong>Dependent Repos:</strong></td>
+                  <td><%= number_with_delimiter(@package.metadata['dependent_repos_count']) %></td>
+                </tr>
+              <% end %>
+              
+              <% if @package.metadata['downloads'] %>
+                <tr>
+                  <td><strong>Downloads:</strong></td>
+                  <td><%= number_with_delimiter(@package.metadata['downloads']) %></td>
+                </tr>
+              <% end %>
+              
+              <% if @package.metadata['rankings'].present? %>
+                <tr>
+                  <td><strong>Ranking:</strong></td>
+                  <td>
+                    <% rankings = @package.metadata['rankings'] %>
+                    <% if rankings['dependent_repos_count'] %>
+                      <span class="badge bg-info me-1">
+                        #<%= number_with_delimiter(rankings['dependent_repos_count']) %> by dependents
+                      </span>
+                    <% end %>
+                    <% if rankings['downloads'] %>
+                      <span class="badge bg-success me-1">
+                        #<%= number_with_delimiter(rankings['downloads']) %> by downloads
+                      </span>
+                    <% end %>
+                    <% if rankings['dependent_packages_count'] %>
+                      <span class="badge bg-warning me-1">
+                        #<%= number_with_delimiter(rankings['dependent_packages_count']) %> by packages
+                      </span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </table>
+          </div>
+        </div>
+      <% end %>
+
       <% if @package.issues_count > 0 %>
         <div class="card mb-4">
           <div class="card-header">
