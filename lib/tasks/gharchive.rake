@@ -103,6 +103,82 @@ namespace :gharchive do
     puts "- Issues updated: #{total_updated}"
     puts "="*80
   end
+
+  desc "Import all Dependabot PRs from GHArchive for the last 30 days"
+  task import_last_30_days: :environment do
+    puts "Importing all Dependabot PRs from GHArchive for the last 30 days..."
+    
+    end_time = Time.now.utc
+    start_time = 30.days.ago.utc
+    
+    total_days = 30
+    successful_imports = 0
+    failed_imports = 0
+    total_events = 0
+    total_prs = 0
+    total_comments = 0
+    total_reviews = 0
+    total_review_comments = 0
+    total_review_threads = 0
+    total_created = 0
+    total_updated = 0
+    
+    puts "Importing from #{start_time.strftime('%Y-%m-%d %H:%M UTC')} to #{end_time.strftime('%Y-%m-%d %H:%M UTC')}"
+    
+    current_time = start_time.beginning_of_day
+    
+    while current_time <= end_time
+      day_str = current_time.strftime('%Y-%m-%d')
+      print "Processing #{day_str}... "
+      
+      begin
+        result = import_hour_with_stats(current_time)
+        
+        if result[:success]
+          successful_imports += 1
+          total_events += result[:dependabot_count]
+          total_prs += result[:pr_count] 
+          total_comments += result[:comment_count]
+          total_reviews += result[:review_count]
+          total_review_comments += result[:review_comment_count]
+          total_review_threads += result[:review_thread_count]
+          total_created += result[:created_count]
+          total_updated += result[:updated_count]
+          
+          puts "✅ #{result[:dependabot_count]} events, #{result[:created_count]} created, #{result[:updated_count]} updated"
+        else
+          failed_imports += 1
+          puts "❌ #{result[:error]}"
+        end
+        
+      rescue => e
+        failed_imports += 1
+        puts "❌ Exception: #{e.message}"
+      end
+      
+      current_time += 1.day
+    end
+    
+    puts "\n" + "="*80
+    puts "30-Day Import Summary"
+    puts "="*80
+    puts "Days processed: #{total_days}"
+    puts "Successful imports: #{successful_imports}"
+    puts "Failed imports: #{failed_imports}"
+    puts "Success rate: #{(successful_imports.to_f / total_days * 100).round(1)}%"
+    puts ""
+        puts "Total Dependabot events: #{total_events}"
+    puts "- PR lifecycle events: #{total_prs}"
+    puts "- Comment updates: #{total_comments}"
+    puts "- Review events: #{total_reviews}"
+    puts "- Review comment events: #{total_review_comments}"
+    puts "- Review thread events: #{total_review_threads}"
+    puts ""
+    puts "Database changes:"
+    puts "- Issues created: #{total_created}"
+    puts "- Issues updated: #{total_updated}"
+    puts "="*80
+  end
   
   desc "Import specific hour of Dependabot PRs from GHArchive (HOUR=2024-01-01-14)"
   task import_hour: :environment do
