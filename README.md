@@ -2,7 +2,7 @@
 
 An index of dependabot pull requests across open source projects.
 
-This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datasets to support, sustain, and secure critical digital infrastructure.
+This project is part of [Ecosyste.ms](https://ecosyste.ms), Tools and open datasets to support, sustain, and secure critical digital infrastructure.
 
 ## API
 
