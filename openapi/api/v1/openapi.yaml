@@ -1,0 +1,419 @@
+openapi: 3.0.1
+info:
+  title: "Ecosyste.ms: Dependabot"
+  description: "An open API service providing issue metadata for open source projects. "
+  contact:
+    name: Ecosyste.ms
+    email: support@ecosyste.ms
+    url: https://ecosyste.ms 
+  version: 1.0.0
+  license:
+    name: CC-BY-SA-4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+externalDocs:
+  description: GitHub Repository
+  url: https://github.com/ecosyste-ms/dependabot
+servers:
+- url: https://dependabot.ecosyste.ms/api/v1
+paths:
+  /repositories/lookup:
+    get:
+      summary: "Lookup repository metadata"
+      operationId: "repositoriesLookup"
+      parameters:
+        - name: url
+          in: query
+          description: "The URL of the repository to lookup"
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+  /hosts:
+    get:
+      summary: list registies
+      operationId: getRegistries
+      parameters:
+        - name: page
+          in: query
+          description: pagination page number 
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return 
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Host'
+  /hosts/{hostName}:
+    get:
+      summary: get a host by name
+      operationId: getHost
+      parameters:
+        - in: path
+          name: hostName
+          schema:
+            type: string
+          required: true
+          description: name of host
+        - name: page
+          in: query
+          description: pagination page number 
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return 
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+  /hosts/{hostName}/repositories:
+    get:
+      summary: get a list of repositories from a host
+      operationId: getHostRepositories
+      parameters:
+        - in: path
+          name: hostName
+          schema:
+            type: string
+          required: true
+          description: name of host
+        - name: page
+          in: query
+          description: pagination page number 
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return 
+          required: false
+          schema:
+            type: integer
+        - name: created_after
+          in: query
+          description: filter by created_at after given time
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: updated_after
+          in: query
+          description: filter by updated_at after given time
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sort
+          in: query
+          description: field to order results by
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: direction to order results by
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repository'
+  /hosts/{hostName}/repositories/{repoName}:
+    get:
+      summary: get a repository from a host
+      operationId: getHostRepository
+      parameters:
+        - in: path
+          name: hostName
+          schema:
+            type: string
+          required: true
+          description: name of host
+        - in: path
+          name: repoName
+          schema:
+            type: string
+          required: true
+          description: name of repository
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+  /hosts/{hostName}/repositories/{repoName}/issues:
+    get:
+      summary: get a list of issues from a repository
+      operationId: getHostRepositoryIssues
+      parameters:
+        - in: path
+          name: hostName
+          schema:
+            type: string
+          required: true
+          description: name of host
+        - in: path
+          name: repoName
+          schema:
+            type: string
+          required: true
+          description: name of repository
+        - name: page
+          in: query
+          description: pagination page number 
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return 
+          required: false
+          schema:
+            type: integer
+        - name: created_after
+          in: query
+          description: filter by created_at after given time
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: updated_after
+          in: query
+          description: filter by updated_at after given time
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sort
+          in: query
+          description: field to order results by
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: direction to order results by
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Issue'
+  /hosts/{hostName}/repositories/{repoName}/issues/{issueNumber}:
+    get:
+      summary: get an issue from a repository
+      operationId: getHostRepositoryIssue
+      parameters:
+        - in: path
+          name: hostName
+          schema:
+            type: string
+          required: true
+          description: name of host
+        - in: path
+          name: repoName
+          schema:
+            type: string
+          required: true
+          description: name of repository
+        - in: path
+          name: issueNumber
+          schema:
+            type: integer
+          required: true
+          description: number of issue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+components:
+  schemas:
+    Host:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        kind:
+          type: string
+        repositories_count:
+          type: integer
+        issues_count:
+          type: integer
+        pull_requests_count:
+          type: integer
+        authors_count:
+          type: integer
+        last_synced_at:
+          type: string
+          format: date-time
+        icon_url:
+          type: string
+    Repository:
+      type: object
+      properties:
+        full_name:
+          type: string
+        html_url:
+          type: string
+        last_synced_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        issues_count:
+          type: integer
+        pull_requests_count:
+          type: integer
+        avg_time_to_close_issue:
+          type: number
+        avg_time_to_close_pull_request:
+          type: number
+        issues_closed_count:
+          type: integer
+        pull_requests_closed_count:
+          type: integer
+        pull_request_authors_count:
+          type: integer
+        issue_authors_count:
+          type: integer
+        avg_comments_per_issue:
+          type: number
+        avg_comments_per_pull_request:
+          type: number
+        merged_pull_requests_count:
+          type: integer
+        bot_issues_count:
+          type: integer
+        bot_pull_requests_count:
+          type: integer
+        past_year_issues_count:
+          type: integer
+        past_year_pull_requests_count:
+          type: integer
+        past_year_avg_time_to_close_issue:
+          type: number
+        past_year_avg_time_to_close_pull_request:
+          type: number
+        past_year_issues_closed_count:
+          type: integer
+        past_year_pull_requests_closed_count:
+          type: integer
+        past_year_pull_request_authors_count:
+          type: integer
+        past_year_issue_authors_count:
+          type: integer
+        past_year_avg_comments_per_issue:
+          type: number
+        past_year_avg_comments_per_pull_request:
+          type: number
+        past_year_merged_pull_requests_count:
+          type: integer
+        past_year_bot_issues_count:
+          type: integer
+        past_year_bot_pull_requests_count:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        issues_url:
+          type: string
+    Issue:
+      type: object
+      properties:
+        uuid:
+          type: integer
+        number:
+          type: integer
+        node_id:
+          type: string
+        title:
+          type: string
+        user:
+          type: string
+        labels:
+          type: array
+          items:
+            type: string
+        assignees:
+          type: array
+          items:
+            type: string
+        comments_count:
+          type: integer
+        pull_request:
+          type: boolean
+        author_association:
+          type: string
+        state:
+          type: string
+        state_reason:
+          type: string
+        time_to_close:
+          type: integer
+        merged_at:
+          type: string
+          format: date-time
+        dependency_metadata:
+          type: object
+        locked:
+          type: boolean
+        comments:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+        html_url:
+          type: string
+        url:
+          type: string
