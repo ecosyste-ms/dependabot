@@ -6,7 +6,7 @@ namespace :gharchive do
   desc "Test import one hour of Dependabot PRs from GHArchive"
   task test_import: :environment do
     # Default to 1 hour ago if no hour specified
-    hour_ago = 24.hour.ago
+    hour_ago = 1.hour.ago
     
     puts "Testing GHArchive import for #{hour_ago.strftime('%Y-%m-%d-%H')}..."
     
@@ -111,7 +111,7 @@ namespace :gharchive do
     end_time = Time.now.utc
     start_time = 30.days.ago.utc
     
-    total_days = 30
+    total_hours = (end_time - start_time) / 1.hour
     successful_imports = 0
     failed_imports = 0
     total_events = 0
@@ -125,11 +125,11 @@ namespace :gharchive do
     
     puts "Importing from #{start_time.strftime('%Y-%m-%d %H:%M UTC')} to #{end_time.strftime('%Y-%m-%d %H:%M UTC')}"
     
-    current_time = start_time.beginning_of_day
+    current_time = start_time.beginning_of_hour
     
     while current_time <= end_time
-      day_str = current_time.strftime('%Y-%m-%d')
-      print "Processing #{day_str}... "
+      hour_str = current_time.strftime('%Y-%m-%d-%H')
+      print "Processing #{hour_str}... "
       
       begin
         result = import_hour_with_stats(current_time)
@@ -156,16 +156,16 @@ namespace :gharchive do
         puts "❌ Exception: #{e.message}"
       end
       
-      current_time += 1.day
+      current_time += 1.hour
     end
     
     puts "\n" + "="*80
     puts "30-Day Import Summary"
     puts "="*80
-    puts "Days processed: #{total_days}"
+    puts "Hours processed: #{total_hours.to_i}"
     puts "Successful imports: #{successful_imports}"
     puts "Failed imports: #{failed_imports}"
-    puts "Success rate: #{(successful_imports.to_f / total_days * 100).round(1)}%"
+    puts "Success rate: #{(successful_imports.to_f / total_hours * 100).round(1)}%"
     puts ""
         puts "Total Dependabot events: #{total_events}"
     puts "- PR lifecycle events: #{total_prs}"
@@ -241,6 +241,8 @@ namespace :gharchive do
       author_association: pr_data['author_association'],
       state_reason: pr_data['state_reason'],
       merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
+      merged_by: pr_data['merged_by']&.dig('login'),
+      closed_by: pr_data['closed_by']&.dig('login'),
       draft: pr_data['draft'],
       mergeable: pr_data['mergeable'],
       mergeable_state: pr_data['mergeable_state'],

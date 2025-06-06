@@ -9,6 +9,8 @@ class Package < ApplicationRecord
   scope :by_ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }
   scope :without_metadata, -> { where("LENGTH(metadata::text) = 2") }
   
+  after_create :sync_async
+  
   # Mapping from GitHub ecosystem names to PURL type names
   # Based on https://github.com/package-url/purl-spec/blob/main/PURL-TYPES.rst
   ECOSYSTEM_TO_PURL_TYPE = {
@@ -112,5 +114,13 @@ class Package < ApplicationRecord
     end
     
     ecosystem
+  end
+  
+  def sync_async
+    SyncPackageWorker.perform_async(id)
+  end
+  
+  def sync
+    fetch_metadata_from_ecosyste_ms
   end
 end

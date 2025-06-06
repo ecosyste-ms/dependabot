@@ -106,6 +106,8 @@ module Hosts
           author_association: issue.author_association,
           state_reason: issue.state_reason,
           merged_at: issue.pull_request.present? ? issue.pull_request.merged_at : nil,
+          merged_by: issue.pull_request.present? && issue.pull_request.merged_by ? issue.pull_request.merged_by.login : nil,
+          closed_by: issue.closed_by ? issue.closed_by.login : nil,
         }
       end
     end

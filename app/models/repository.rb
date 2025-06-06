@@ -5,6 +5,8 @@ class Repository < ApplicationRecord
 
   validates :full_name, presence: true
 
+  after_create :sync_repository_async
+
   scope :active, -> { where(status: nil) }
   scope :visible, -> { active.where.not(last_synced_at: nil) }
   scope :created_after, ->(date) { where('created_at > ?', date) }
@@ -64,6 +66,8 @@ class Repository < ApplicationRecord
     return if response.status != 200
     json = response.body
 
+    # Store all metadata from repos.ecosyste.ms
+    self.metadata = json
     self.owner = json['owner']
     self.status = json['status']
     self.default_branch = json['default_branch']
@@ -183,5 +187,13 @@ class Repository < ApplicationRecord
 
   def latest_issue_number
     issues.maximum(:number)
+  end
+  
+  def sync_repository_async
+    SyncRepositoryWorker.perform_async(id)
+  end
+  
+  def sync
+    sync_details
   end
 end
