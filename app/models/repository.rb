@@ -12,9 +12,26 @@ class Repository < ApplicationRecord
   scope :created_after, ->(date) { where('created_at > ?', date) }
   scope :updated_after, ->(date) { where('updated_at > ?', date) }
   scope :owner, ->(owner) { where(owner: owner) }
+  scope :fork, -> { where("metadata->>'fork' = 'true'") }
+  scope :archived, -> { where("metadata->>'archived' = 'true'") }
 
   def self.sync_least_recently_synced
     Repository.active.order('last_synced_at ASC').limit(3000).each(&:sync_async)
+  end
+  
+  def self.enqueue_stale_for_sync(limit: 1000)
+    stale_repository_ids = active
+                             .where(last_synced_at: ..1.week.ago)
+                             .or(active.where(last_synced_at: nil))
+                             .order(Arel.sql('RANDOM()'))
+                             .limit(limit)
+                             .pluck(:id)
+    
+    # Bulk enqueue jobs - more efficient than individual perform_async calls
+    jobs = stale_repository_ids.map { |id| [id] }
+    SyncRepositoryWorker.perform_bulk(jobs) if jobs.any?
+    
+    stale_repository_ids.count
   end
 
   def to_s

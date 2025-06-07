@@ -43,7 +43,20 @@
               <% end %>
               
               <% if @repository.metadata['license'] %>
-                <strong>License:</strong> <%= @repository.metadata['license'].upcase %>
+                <strong>License:</strong> <%= @repository.metadata['license'].upcase %><br>
+              <% end %>
+              
+              <% if @repository.metadata&.dig('fork') == true %>
+                <strong>Fork:</strong> Yes<br>
+                <% if @repository.metadata['source_name'] %>
+                  <strong>Parent:</strong> 
+                  <% parent_host = @repository.metadata['source_host'] || @host.name %>
+                  <%= link_to @repository.metadata['source_name'], "#{@host.url}/#{@repository.metadata['source_name']}", target: :_blank, class: "text-decoration-none" %>
+                <% end %>
+              <% end %>
+              
+              <% if @repository.metadata&.dig('archived') == true %>
+                <strong>Archived:</strong> Yes
               <% end %>
             </div>
           </div>

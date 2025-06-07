@@ -25,7 +25,7 @@ class HostsController < ApplicationController
       scope = scope.where("full_name ILIKE ?", search_term)
     end
 
-    sort = params[:sort].presence || 'last_synced_at'
+    sort = params[:sort].presence || 'issues_count'
     if params[:order] == 'asc'
       scope = scope.order(Arel.sql(sort).asc.nulls_last)
     else

@@ -106,6 +106,31 @@
                     #<%= issue.number %>
                   </h6>
                   
+                  <% issue_packages_array = issue.issue_packages.to_a %>
+                  <% if issue_packages_array.size > 0 %>
+                    <div class="mb-2">
+                      <% issue_packages_array.first(2).each do |issue_package| %>
+                        <%= link_to show_packages_path(issue_package.package.ecosystem, issue_package.package.name), class: "text-decoration-none me-2" do %>
+                          <span class="badge bg-primary">
+                            <%= octicon "package", class: "me-1" %>
+                            <%= issue_package.package.name %>
+                            <% if issue_package.version_change %>
+                              <small class="ms-1"><%= issue_package.version_change %></small>
+                            <% end %>
+                          </span>
+                        <% end %>
+                        <% if issue_package.update_type %>
+                          <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %> me-1">
+                            <%= issue_package.update_type %>
+                          </span>
+                        <% end %>
+                      <% end %>
+                      <% if issue_packages_array.size > 2 %>
+                        <span class="badge bg-secondary">+<%= issue_packages_array.size - 2 %> more</span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                  
                   <p class="card-text text-muted">
                     <small>
                       <% effective_state = issue.effective_state %>
@@ -116,7 +141,7 @@
                       <%= octicon "clock", class: "me-1" %>
                       <%= time_ago_in_words(issue.created_at) %> ago
                       
-                      <% if issue.comments_count > 0 %>
+                      <% if issue.comments_count && issue.comments_count > 0 %>
                         <%= octicon "comment", class: "ms-3 me-1" %>
                         <%= pluralize issue.comments_count, 'comment' %>
                       <% end %>

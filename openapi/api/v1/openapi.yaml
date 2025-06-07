@@ -16,6 +16,172 @@ externalDocs:
 servers:
 - url: https://dependabot.ecosyste.ms/api/v1
 paths:
+  /packages:
+    get:
+      summary: "List packages"
+      operationId: "getPackages"
+      parameters:
+        - name: page
+          in: query
+          description: "pagination page number"
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: "Number of records to return"
+          required: false
+          schema:
+            type: integer
+        - name: ecosystem
+          in: query
+          description: "Filter by ecosystem"
+          required: false
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: "Search by package name"
+          required: false
+          schema:
+            type: string
+        - name: repository_url
+          in: query
+          description: "Filter by repository URL"
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: "field to order results by (name or issues_count)"
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: "direction to order results by (asc or desc)"
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Package'
+  /packages/ecosystems:
+    get:
+      summary: "List available ecosystems"
+      operationId: "getPackageEcosystems"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /packages/{ecosystem}:
+    get:
+      summary: "List packages in an ecosystem"
+      operationId: "getEcosystemPackages"
+      parameters:
+        - in: path
+          name: ecosystem
+          schema:
+            type: string
+          required: true
+          description: "ecosystem name"
+        - name: page
+          in: query
+          description: "pagination page number"
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: "Number of records to return"
+          required: false
+          schema:
+            type: integer
+        - name: name
+          in: query
+          description: "Search by package name"
+          required: false
+          schema:
+            type: string
+        - name: repository_url
+          in: query
+          description: "Filter by repository URL"
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: "field to order results by (name or issues_count)"
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: "direction to order results by (asc or desc)"
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Package'
+  /packages/{ecosystem}/{name}:
+    get:
+      summary: "Get a specific package"
+      operationId: "getPackage"
+      parameters:
+        - in: path
+          name: ecosystem
+          schema:
+            type: string
+          required: true
+          description: "ecosystem name"
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: "package name"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Package'
+                  - type: object
+                    properties:
+                      recent_issues:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Issue'
+                      issue_packages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/IssuePackage'
   /repositories/lookup:
     get:
       summary: "Lookup repository metadata"
@@ -417,3 +583,44 @@ components:
           type: string
         url:
           type: string
+    Package:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        ecosystem:
+          type: string
+        repository_url:
+          type: string
+        issues_count:
+          type: integer
+        purl:
+          type: string
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssuePackage:
+      type: object
+      properties:
+        old_version:
+          type: string
+        new_version:
+          type: string
+        update_type:
+          type: string
+        path:
+          type: string
+        pr_created_at:
+          type: string
+          format: date-time
+        version_change:
+          type: string
+        issue:
+          $ref: '#/components/schemas/Issue'

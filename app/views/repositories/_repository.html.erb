@@ -7,6 +7,18 @@
           <% if @host.nil? %>
             <%= link_to repository.host.name, host_path(repository.host.name) %> / <% end %>
             <%= link_to repository, host_repository_path(repository.host, repository) %>
+            <% if repository.metadata&.dig('fork') == true %>
+              <span class="badge bg-secondary ms-2">
+                <%= octicon "repo-forked", class: "me-1" %>
+                Fork
+              </span>
+            <% end %>
+            <% if repository.metadata&.dig('archived') == true %>
+              <span class="badge bg-warning ms-2">
+                <%= octicon "archive", class: "me-1" %>
+                Archived
+              </span>
+            <% end %>
         </h5>
       
         <% if repository.metadata.present? && repository.metadata['description'] %>

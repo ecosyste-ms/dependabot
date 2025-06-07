@@ -1,6 +1,6 @@
 class HomeController < ApplicationController
   def index
-    scope = Issue.includes(:repository, :host)
+    scope = Issue.includes(:repository, :host, issue_packages: :package)
                  .order(created_at: :desc)
     @pagy, @issues = pagy_countless(scope, limit: 50)
     

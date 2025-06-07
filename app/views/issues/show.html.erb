@@ -49,7 +49,7 @@
             </div>
             <div class="col-md-6">
               <strong>Author:</strong> 
-              <img src="https://github.com/<%= @issue.user.gsub('[bot]', '') %>.png" class="rounded me-2" height='20' width='20' alt="<%= @issue.user %>">
+              <img src="<%= @issue.user_avatar_url %>" class="rounded me-2" height='20' width='20' alt="<%= @issue.user %>">
               <%= @issue.user %><br>
               <strong>Association:</strong> <%= @issue.author_association&.humanize || 'Unknown' %><br>
               <strong>Comments:</strong> <%= @issue.comments_count %>

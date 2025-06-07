@@ -54,4 +54,10 @@ namespace :packages do
     puts "Issues with new metadata: #{Issue.dependabot.with_dependency_metadata.count}"
     puts "Issues without metadata: #{Issue.dependabot.without_dependency_metadata.count}"
   end
+  
+  desc "Enqueue packages for sync if not synced recently"
+  task sync_stale: :environment do
+    count = Package.enqueue_stale_for_sync
+    puts "Enqueued #{count} packages for sync"
+  end
 end

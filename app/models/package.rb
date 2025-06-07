@@ -11,6 +11,20 @@ class Package < ApplicationRecord
   
   after_create :sync_async
   
+  def self.enqueue_stale_for_sync(limit: 1000)
+    stale_package_ids = without_metadata
+                          .or(where(updated_at: ..1.week.ago))
+                          .order(Arel.sql('RANDOM()'))
+                          .limit(limit)
+                          .pluck(:id)
+    
+    # Bulk enqueue jobs - more efficient than individual perform_async calls
+    jobs = stale_package_ids.map { |id| [id] }
+    SyncPackageWorker.perform_bulk(jobs) if jobs.any?
+    
+    stale_package_ids.count
+  end
+  
   # Mapping from GitHub ecosystem names to PURL type names
   # Based on https://github.com/package-url/purl-spec/blob/main/PURL-TYPES.rst
   ECOSYSTEM_TO_PURL_TYPE = {

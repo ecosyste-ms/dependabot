@@ -488,6 +488,14 @@ class Issue < ApplicationRecord
     pull_request && merged_at.present?
   end
   
+  def user_avatar_url
+    return "https://github.com/dependabot.png" if user.blank?
+    
+    # Remove [bot] suffix for GitHub avatar URLs
+    username = user.gsub(/\[bot\]$/, '')
+    "https://github.com/#{username}.png"
+  end
+  
   private
   
   def infer_ecosystem_from_path(path, label_ecosystem)
