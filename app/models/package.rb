@@ -39,7 +39,7 @@ class Package < ApplicationRecord
   }.freeze
   
   def to_s
-    "#{name} (#{ecosystem})"
+    "#{name} (#{purl_type})"
   end
   
   def purl_type
