@@ -1,6 +1,6 @@
 # [Ecosyste.ms: dependabot](https://dependabot.ecosyste.ms)
 
-An index of dependabot pull requests across open source projects.
+An open index of dependabot pull requests across open source projects.
 
 This project is part of [Ecosyste.ms](https://ecosyste.ms), Tools and open datasets to support, sustain, and secure critical digital infrastructure.
 

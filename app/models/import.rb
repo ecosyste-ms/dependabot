@@ -43,13 +43,15 @@ class Import < ApplicationRecord
       decompressed_data = Zlib::GzipReader.new(StringIO.new(response.body)).read
       stats = process_gharchive_data(decompressed_data)
       
-      # Record successful import
-      create!(
-        filename: filename,
-        imported_at: Time.current,
-        **stats,
-        success: true
-      )
+      # Record successful import (skip if already exists)
+      unless exists?(filename: filename)
+        create!(
+          filename: filename,
+          imported_at: Time.current,
+          **stats,
+          success: true
+        )
+      end
       
       { success: true, **stats }
       
@@ -72,20 +74,25 @@ class Import < ApplicationRecord
     
     while current_time <= end_time
       results[:total_hours] += 1
+      hour_str = current_time.strftime('%Y-%m-%d %H:00 UTC')
       
       if already_imported?(current_time)
+        puts "⏭️  Skipping #{hour_str} (already imported)"
         results[:skipped_imports] += 1
         results[:successful_imports] += 1
         current_time += 1.hour
         next
       end
       
+      puts "📥 Processing #{hour_str}..."
       result = import_hour(current_time)
       
       if result[:success]
+        puts "✅ #{hour_str} - Found #{result[:dependabot_count]} Dependabot events"
         results[:successful_imports] += 1
         add_stats_to_totals(results, result)
       else
+        puts "❌ #{hour_str} - Failed: #{result[:error]}"
         results[:failed_imports] += 1
       end
       
@@ -98,6 +105,9 @@ class Import < ApplicationRecord
   private
   
   def self.create_failed_import(filename, error_message)
+    # Only create if one doesn't already exist
+    return if exists?(filename: filename)
+    
     create!(
       filename: filename,
       imported_at: Time.current,
@@ -351,7 +361,11 @@ class Import < ApplicationRecord
         repo.owner = owner_name
       end
     rescue ActiveRecord::RecordNotUnique
-      Repository.find_by!(full_name: repo_name, host: github_host)
+      # Handle race condition - find the existing record using the same constraint
+      Repository.find_by('lower(full_name) = ? AND host_id = ?', repo_name.downcase, github_host.id)
+    rescue => e
+      Rails.logger.error "Failed to find/create repository #{repo_name}: #{e.message}"
+      nil
     end
   end
   

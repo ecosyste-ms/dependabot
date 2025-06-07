@@ -114,6 +114,7 @@ class Issue < ApplicationRecord
   scope :without_dependency_metadata, -> { where(dependency_metadata: nil) }
   scope :package_name, ->(package_name) { dependabot.with_dependency_metadata.where("dependency_metadata->>'package_name' = ?", package_name) }
   scope :ecosystem, ->(ecosystem) { dependabot.with_dependency_metadata.where("dependency_metadata->>'ecosystem' = ?", ecosystem) }
+  scope :with_label, ->(label) { where("labels @> ARRAY[?]::varchar[]", label) }
 
   def to_param
     number.to_s

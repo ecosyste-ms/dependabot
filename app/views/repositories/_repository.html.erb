@@ -16,7 +16,7 @@
         <% end %>
         
         <p class="card-subtitle mb-2 text-muted"><small>
-          <%= link_to host_repository_issues_path(repository.host, repository), class: "text-decoration-none" do %>
+          <%= link_to host_repository_path(repository.host, repository), class: "text-decoration-none" do %>
             <%= pluralize repository.issues_count, 'Dependabot PR' %>
           <% end %>
           
@@ -41,8 +41,7 @@
         </small></p>
       </div>
       <div class="flex-shrink-0">
-        <%# todo avatar url %>
-        <img src="" class="rounded" height='40' width='40' onerror="this.style.display='none'">
+        <img src="<%= repository.avatar_url %>" class="rounded" height='40' width='40' onerror="this.style.display='none'">
       </div>  
     </div>
   </div>

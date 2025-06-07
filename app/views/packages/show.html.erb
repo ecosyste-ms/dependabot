@@ -90,7 +90,7 @@
                     </h6>
                     
                     <p class="text-muted mb-2">
-                      <%= link_to issue.repository.full_name, [issue.host, issue.repository, :issues], class: "text-decoration-none" %>
+                      <%= link_to issue.repository.full_name, [issue.host, issue.repository], class: "text-decoration-none" %>
                       #<%= issue.number %>
                     </p>
                     
@@ -101,7 +101,7 @@
                         </span>
                       <% end %>
                       <% if issue_package.update_type %>
-                        <%= link_to show_packages_path(@package.ecosystem, @package.name, type: issue_package.update_type), class: "text-decoration-none" do %>
+                        <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(type: issue_package.update_type)), class: "text-decoration-none" do %>
                           <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %>">
                             <%= issue_package.update_type.capitalize %> PR
                           </span>
@@ -111,7 +111,7 @@
                     
                     <small class="text-muted">
                       <% effective_state = issue.effective_state %>
-                      <%= link_to show_packages_path(@package.ecosystem, @package.name, status: effective_state), class: "text-decoration-none" do %>
+                      <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(status: effective_state)), class: "text-decoration-none" do %>
                         <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
                           <%= effective_state.capitalize %>
                         </span>
@@ -128,7 +128,7 @@
                   </div>
                   
                   <div class="flex-shrink-0">
-                    <img src="https://github.com/dependabot.png" class="rounded" height='32' width='32' alt="Dependabot">
+                    <img src="<%= issue.repository.avatar_url %>" class="rounded" height='32' width='32' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
                   </div>
                 </div>
               </div>
@@ -283,21 +283,21 @@
             %>
             
             <div class="d-flex justify-content-between mb-2">
-              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'open'), class: "text-decoration-none" do %>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(status: 'open')), class: "text-decoration-none" do %>
                 <span class="badge bg-success">Open</span>
               <% end %>
               <span><%= pluralize open_count, 'PR' %></span>
             </div>
             
             <div class="d-flex justify-content-between mb-2">
-              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'merged'), class: "text-decoration-none" do %>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(status: 'merged')), class: "text-decoration-none" do %>
                 <span class="badge bg-primary">Merged</span>
               <% end %>
               <span><%= pluralize merged_count, 'PR' %></span>
             </div>
             
             <div class="d-flex justify-content-between mb-2">
-              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'closed'), class: "text-decoration-none" do %>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(status: 'closed')), class: "text-decoration-none" do %>
                 <span class="badge bg-secondary">Closed</span>
               <% end %>
               <span><%= pluralize closed_count, 'PR' %></span>
@@ -322,7 +322,7 @@
               <% update_types.each do |type, count| %>
                 <% next if type.nil? %>
                 <div class="d-flex justify-content-between mb-2">
-                  <%= link_to show_packages_path(@package.ecosystem, @package.name, type: type), class: "text-decoration-none" do %>
+                  <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(type: type)), class: "text-decoration-none" do %>
                     <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : type == 'removal' ? 'danger' : 'success' %>">
                       <%= type.capitalize %>
                     </span>

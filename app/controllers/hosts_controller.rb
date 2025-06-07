@@ -19,6 +19,12 @@ class HostsController < ApplicationController
 
     scope = @host.repositories
 
+    # Search functionality
+    if params[:search].present?
+      search_term = "%#{params[:search]}%"
+      scope = scope.where("full_name ILIKE ?", search_term)
+    end
+
     sort = params[:sort].presence || 'last_synced_at'
     if params[:order] == 'asc'
       scope = scope.order(Arel.sql(sort).asc.nulls_last)

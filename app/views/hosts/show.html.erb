@@ -2,18 +2,24 @@
 <% @meta_description = "Repositories with Issues and Pull Requests indexed from #{@host}" %>
 
 <div class="container-sm">
-  <h1 class='mb-4'>
-    <%= link_to @host, @host.url, target: :_blank %>
-  </h1>
-
   <div class="d-flex justify-content-between align-items-center my-3">
-    <h2 class="mb-0">
-      Repositories 
-      <span class="badge bg-secondary">
-        <%= number_with_delimiter @host.repositories_count %>
-      </span>
-    </h2>
+    <h1 class='mb-4'>
+      <%= link_to @host, @host.url, target: :_blank %> Repositories 
+    </h1>
     <%= render 'sort' %>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <%= form_with url: host_path(@host), method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.text_field :search, placeholder: "Search repositories...", 
+            value: params[:search], 
+            class: "form-control me-2" %>
+        <%= form.hidden_field :sort, value: params[:sort] if params[:sort] %>
+        <%= form.hidden_field :order, value: params[:order] if params[:order] %>
+        <%= form.submit "Search", class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
   </div>
 
   <%= render @repositories %>

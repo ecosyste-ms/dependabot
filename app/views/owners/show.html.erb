@@ -1,80 +1,37 @@
-<% @meta_title = "#{@owner} issue stats | #{@host}" %>
-<% @meta_description = "Issue and pull request stats for #{@owner} on #{@host}" %>
+<% @meta_title = "#{@owner} Dependabot stats | #{@host}" %>
+<% @meta_description = "Dependabot PR stats for #{@owner} on #{@host}" %>
 
 <div class="container-sm">
-  <h1>
+  <h1 class='mb-4'>
     <%= link_to @host, host_path(@host) %> /
-      
-    <%= link_to @owner, "#{@host.url}/#{@owner}", target: :_blank %> issue stats
+    <%= link_to @owner, "#{@host.url}/#{@owner}", target: :_blank %>
   </h1>
 
-  <p>
-    Total pull requests: <%= number_with_delimiter @pull_requests_count %><br>
-    Merged pull request: <%= number_with_delimiter @merged_pull_requests_count %><br>
-    Average time to close pull requests: <%= distance_of_time_in_words_if_present @average_pull_request_close_time %><br>
-    Average comments per pull request: <%= rounded_number_with_delimiter @average_pull_request_comments_count %><br>
-  </p>
-
-  <div class='row'>
-    <div class='col-md-4'>
-      <h4>Pull requests created</h4>
-      <ul>
-        <% @pull_request_repos.each do |full_name, count| %>
-          <li>
-            <%= link_to full_name, host_repository_path(@host.name, full_name) %>:
-            <%= number_with_delimiter count %>
-          </li>
-        <% end %>
-      </ul>
+  <div class="row">
+    <div class="col-md-8">
+      <%= render @repositories %>
+      <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     </div>
-  </div>
-
-  <hr>
-
-  <div class='row'>
-    <div class='col-md-4'>
-      <h4>Pull Request owner Associations</h4>
-      <ul>
-        <% @pull_request_author_associations_count.each do |role, count| %>
-          <li>
-            <%= role.humanize %>
-            (<%= number_with_delimiter count %>, <%= number_to_percentage count.to_f / @pull_requests_count * 100, precision: 2 %>)
-          </li>
-        <% end %>
-      </ul>
-    </div>
-  </div>
-  <hr/>
-
-  <div class='row'>
-
-    <div class='col-md-4'>
-      <h4>Top Pull Request Authors</h4>
-      <ul>
-        <% @pull_request_authors.each do |author, count| %>
-          <li>
-            <%= link_to author, host_author_path(@host.name, author) %>
-            <% if bot?(author) %>
-              <span title='bot'>🤖</span>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-title">Dependabot Stats</h6>
+          <p class="card-text small">
+            <strong>Total PRs:</strong> <%= number_with_delimiter @pull_requests_count %><br>
+            <strong>Merged:</strong> <%= number_with_delimiter @merged_pull_requests_count %><br>
+            <strong>Avg close time:</strong> <%= distance_of_time_in_words_if_present @average_pull_request_close_time %><br>
+            <strong>Avg comments:</strong> <%= rounded_number_with_delimiter @average_pull_request_comments_count %>
+          </p>
+          <h6 class="card-title mt-3">Top Ecosystems</h6>
+          <div class="card-text">
+            <% @pull_request_labels_count.first(5).each do |label, count| %>
+              <span class="badge bg-light text-dark me-1 mb-1">
+                <%= label %> (<%= count %>)
+              </span>
             <% end %>
-            (<%= number_with_delimiter count %>)
-          </li>
-        <% end %>
-      </ul>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <hr>
-  <div class='row'>
-    <div class='col-md-4'>
-      <h4>Top Pull Request Labels</h4>
-      <ul>
-        <% @pull_request_labels_count.first(15).each do |label, count| %>
-          <li>
-            <%= label %>
-            (<%= number_with_delimiter count %>)
-          </li>
-        <% end %>
-      </ul>
-    </div>
+  </div>  
 </div>

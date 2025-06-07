@@ -1,363 +1,89 @@
-<% @meta_title = "#{@repository.full_name} issue stats | #{@host}" %>
-<% @meta_description = "Issue and pull request stats for #{@repository.full_name} on #{@host}" %>
+<% @meta_title = "#{@repository.full_name} Dependabot PRs | #{@host}" %>
+<% @meta_description = "Dependabot pull requests for #{@repository.full_name} on #{@host}" %>
 
 <div class="container-sm">
-  <h1>
+  <h1 class='mb-4'>
     <%= link_to @host, host_path(@host) %> /
-    
     <%= link_to @repository.owner, host_owner_path(@host, @repository.owner) %> /
-
-    <%= link_to @repository.project_name, @repository.html_url, target: :_blank %> issue stats
+    <%= link_to @repository.project_name, @repository.html_url, target: :_blank %>
   </h1>
 
-  <% if @repository.last_synced_at %>
-    <p class="card-subtitle mb-2 text-muted"><i><small>
-        Last synced: <%= distance_of_time_in_words_to_now @repository.last_synced_at %> ago
-    </small></i></p>
-    
-    <% if @repository.metadata.present? && @repository.metadata != {} %>
-      <div class="row">
-        <div class="col-md-12">
-          <h4>Repository Information</h4>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="col-md-6">
-          <% if @repository.metadata['description'] %>
-            <p><strong>Description:</strong><br>
-            <%= @repository.metadata['description'] %></p>
-          <% end %>
-          
-          <% if @repository.metadata['homepage'] %>
-            <p><strong>Homepage:</strong><br>
-            <%= link_to @repository.metadata['homepage'], @repository.metadata['homepage'], target: '_blank', class: 'text-decoration-none' %>
-            <%= octicon 'link-external', height: 12 %></p>
-          <% end %>
-          
-          <% if @repository.metadata['language'] %>
-            <p><strong>Primary Language:</strong> <%= @repository.metadata['language'] %></p>
-          <% end %>
-          
-          <% if @repository.metadata['license'] %>
-            <p><strong>License:</strong> <%= @repository.metadata['license'].upcase %></p>
-          <% end %>
-          
-          <% if @repository.metadata['topics'].present? %>
-            <p><strong>Topics:</strong><br>
-            <% @repository.metadata['topics'].each do |topic| %>
-              <span class="badge bg-light text-dark me-1"><%= topic %></span>
-            <% end %></p>
-          <% end %>
-        </div>
-        
-        <div class="col-md-6">
-          <% if @repository.metadata['size'] %>
-            <p><strong>Repository Size:</strong> <%= number_to_human_size(@repository.metadata['size'] * 1024, precision: 1) %></p>
-          <% end %>
-          
-          <% if @repository.metadata['stargazers_count'] %>
-            <p><strong>Stars:</strong> <%= number_with_delimiter(@repository.metadata['stargazers_count']) %></p>
-          <% end %>
-          
-          <% if @repository.metadata['forks_count'] %>
-            <p><strong>Forks:</strong> <%= number_with_delimiter(@repository.metadata['forks_count']) %></p>
-          <% end %>
-          
-          <% if @repository.metadata['subscribers_count'] %>
-            <p><strong>Watchers:</strong> <%= number_with_delimiter(@repository.metadata['subscribers_count']) %></p>
-          <% end %>
-          
-          <% if @repository.metadata['open_issues_count'] %>
-            <p><strong>Open Issues:</strong> <%= number_with_delimiter(@repository.metadata['open_issues_count']) %></p>
-          <% end %>
-          
-          <% if @repository.metadata['pushed_at'] %>
-            <p><strong>Last Push:</strong> <%= time_ago_in_words(Time.parse(@repository.metadata['pushed_at'])) %> ago</p>
-          <% end %>
-          
-          <% if @repository.metadata['created_at'] %>
-            <p><strong>Created:</strong> <%= time_ago_in_words(Time.parse(@repository.metadata['created_at'])) %> ago</p>
-          <% end %>
-        </div>
-      </div>
-      
-      <% if @repository.metadata['metadata'] && @repository.metadata['metadata']['files'] %>
-        <div class="row">
-          <div class="col-md-12">
-            <h5>Repository Files</h5>
-            <% files = @repository.metadata['metadata']['files'].compact %>
-            <% if files.any? %>
-              <% files.each do |file_type, filename| %>
-                <span class="badge bg-info me-1"><%= file_type.humanize %>: <%= filename %></span>
-              <% end %>
-            <% else %>
-              <span class="text-muted">No special files detected</span>
-            <% end %>
-          </div>
+  <div class="row">
+    <div class="col-md-8">
+      <% if params[:label].present? %>
+        <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
+          <span>Filtered by label: <strong><%= params[:label] %></strong></span>
+          <%= link_to "Clear filter", host_repository_path(@host, @repository), class: "btn btn-sm btn-outline-secondary" %>
         </div>
       <% end %>
       
-      <hr>
-    <% end %>
-    
-    <div class="row mb-3">
-      <div class="col-md-12">
-        <%= link_to host_repository_issues_path(@host, @repository), class: "btn btn-primary" do %>
-          <%= octicon "issue-opened", class: "me-2" %>
-          View <%= pluralize(@repository.issues.count, 'Dependabot PR') %>
-        <% end %>
-      </div>
+      <%= render @issues %>
+      <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     </div>
-    
-    <% if @repository.issues_count %>
-      <div class='row'>
-        <div class='col-md-6'>
-          <p>
-            Total issues: <%= link_to number_with_delimiter(@repository.issues_count), host_repository_issues_path(@host, @repository) %><br>
-            Total pull requests: <%= number_with_delimiter @repository.pull_requests_count %><br>
-            Average time to close issues: <%= distance_of_time_in_words_if_present @repository.avg_time_to_close_issue %><br>
-            Average time to close pull requests: <%= distance_of_time_in_words_if_present @repository.avg_time_to_close_pull_request %><br>
-            Total issue authors: <%= number_with_delimiter @repository.issue_authors_count %><br>
-            Total pull request authors: <%= number_with_delimiter @repository.pull_request_authors_count %><br>
-            Average comments per issue: <%= rounded_number_with_delimiter @repository.avg_comments_per_issue %><br>
-            Average comments per pull request: <%= rounded_number_with_delimiter @repository.avg_comments_per_pull_request %><br>
-            Merged pull requests: <%= rounded_number_with_delimiter @repository.merged_pull_requests_count %><br>
-
-            Bot issues: <%= number_with_delimiter @repository.bot_issues_count %><br>
-            Bot pull requests: <%= number_with_delimiter @repository.bot_pull_requests_count %>
-          </p>
-        </div>
-        <div class='col-md-6'>
-          <p>
-            Past year issues: <%= number_with_delimiter @repository.past_year_issues_count %><br>
-            Past year pull requests: <%= number_with_delimiter @repository.past_year_pull_requests_count %><br>
-            Past year average time to close issues: <%= distance_of_time_in_words_if_present @repository.past_year_avg_time_to_close_issue %><br>
-            Past year average time to close pull requests: <%= distance_of_time_in_words_if_present @repository.past_year_avg_time_to_close_pull_request %><br>
-            Past year issue authors: <%= number_with_delimiter @repository.past_year_issue_authors_count %><br>
-            Past year pull request authors: <%= number_with_delimiter @repository.past_year_pull_request_authors_count %><br>
-            Past year average comments per issue: <%= rounded_number_with_delimiter @repository.past_year_avg_comments_per_issue %><br>
-            Past year average comments per pull request: <%= rounded_number_with_delimiter @repository.past_year_avg_comments_per_pull_request %><br>
-            Past year merged pull requests: <%= rounded_number_with_delimiter @repository.past_year_merged_pull_requests_count %><br>
-            Past year bot issues: <%= number_with_delimiter @repository.past_year_bot_issues_count %><br>
-            Past year bot pull requests: <%= number_with_delimiter @repository.past_year_bot_pull_requests_count %>
-        </div>
-      </div>
-      More repo stats: <%= link_to @repository.repos_url, @repository.repos_url, target: :_blank %><br>
-      JSON API: <%= link_to api_v1_host_repository_url(@host, @repository), api_v1_host_repository_url(@host, @repository), target: :_blank %>
-      
+    <div class="col-md-4">
       <% if @repository.metadata.present? && @repository.metadata != {} %>
-        <hr>
-        <div class="row">
-          <div class="col-md-12">
-            <h4>Repository Information</h4>
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-md-6">
-            <% if @repository.metadata['description'] %>
-              <p><strong>Description:</strong><br>
-              <%= @repository.metadata['description'] %></p>
-            <% end %>
-            
-            <% if @repository.metadata['homepage'] %>
-              <p><strong>Homepage:</strong><br>
-              <%= link_to @repository.metadata['homepage'], @repository.metadata['homepage'], target: '_blank', class: 'text-decoration-none' %>
-              <%= octicon 'link-external', height: 12 %></p>
-            <% end %>
-            
-            <% if @repository.metadata['language'] %>
-              <p><strong>Primary Language:</strong> <%= @repository.metadata['language'] %></p>
-            <% end %>
-            
-            <% if @repository.metadata['license'] %>
-              <p><strong>License:</strong> <%= @repository.metadata['license'].upcase %></p>
-            <% end %>
-            
-            <% if @repository.metadata['topics'].present? %>
-              <p><strong>Topics:</strong><br>
-              <% @repository.metadata['topics'].each do |topic| %>
-                <span class="badge bg-light text-dark me-1"><%= topic %></span>
-              <% end %></p>
-            <% end %>
-          </div>
-          
-          <div class="col-md-6">
-            <% if @repository.metadata['size'] %>
-              <p><strong>Repository Size:</strong> <%= number_to_human_size(@repository.metadata['size'] * 1024, precision: 1) %></p>
-            <% end %>
-            
-            <% if @repository.metadata['stargazers_count'] %>
-              <p><strong>Stars:</strong> <%= number_with_delimiter(@repository.metadata['stargazers_count']) %></p>
-            <% end %>
-            
-            <% if @repository.metadata['forks_count'] %>
-              <p><strong>Forks:</strong> <%= number_with_delimiter(@repository.metadata['forks_count']) %></p>
-            <% end %>
-            
-            <% if @repository.metadata['subscribers_count'] %>
-              <p><strong>Watchers:</strong> <%= number_with_delimiter(@repository.metadata['subscribers_count']) %></p>
-            <% end %>
-            
-            <% if @repository.metadata['open_issues_count'] %>
-              <p><strong>Open Issues:</strong> <%= number_with_delimiter(@repository.metadata['open_issues_count']) %></p>
-            <% end %>
-            
-            <% if @repository.metadata['pushed_at'] %>
-              <p><strong>Last Push:</strong> <%= time_ago_in_words(Time.parse(@repository.metadata['pushed_at'])) %> ago</p>
-            <% end %>
-            
-            <% if @repository.metadata['created_at'] %>
-              <p><strong>Created:</strong> <%= time_ago_in_words(Time.parse(@repository.metadata['created_at'])) %> ago</p>
-            <% end %>
-          </div>
-        </div>
-        
-        <% if @repository.metadata['metadata'] && @repository.metadata['metadata']['files'] %>
-          <div class="row">
-            <div class="col-md-12">
-              <h5>Repository Files</h5>
-              <% files = @repository.metadata['metadata']['files'].compact %>
-              <% if files.any? %>
-                <% files.each do |file_type, filename| %>
-                  <span class="badge bg-info me-1"><%= file_type.humanize %>: <%= filename %></span>
-                <% end %>
-              <% else %>
-                <span class="text-muted">No special files detected</span>
+        <div class="card mb-3">
+          <div class="card-body">
+            <h6 class="card-title">Repository Info</h6>
+            <div class="card-text small">
+              <% if @repository.metadata['description'] %>
+                <p><%= truncate(@repository.metadata['description'], length: 100) %></p>
+              <% end %>
+              
+              <% if @repository.metadata['language'] %>
+                <strong>Language:</strong> <%= @repository.metadata['language'] %><br>
+              <% end %>
+              
+              <% if @repository.metadata['stargazers_count'] %>
+                <strong>Stars:</strong> <%= number_with_delimiter(@repository.metadata['stargazers_count']) %><br>
+              <% end %>
+              
+              <% if @repository.metadata['forks_count'] %>
+                <strong>Forks:</strong> <%= number_with_delimiter(@repository.metadata['forks_count']) %><br>
+              <% end %>
+              
+              <% if @repository.metadata['license'] %>
+                <strong>License:</strong> <%= @repository.metadata['license'].upcase %>
               <% end %>
             </div>
           </div>
-        <% end %>
+        </div>
       <% end %>
-      
-      <hr>
-      <% if @repository.issue_author_associations_count.any? || @repository.pull_request_author_associations_count.any? %>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Issue Author Associations</h4>
-          <ul>
-            <% @repository.issue_author_associations_count.each do |author, count| %>
-              <li>
-                <%= author.humanize %>
-                (<%= number_with_delimiter count %>, <%= number_to_percentage count.to_f / @repository.issues_count * 100, precision: 2 %>)
-              </li>
-            <% end %>
-          </ul>
+
+      <% if @repository.issues_count %>
+        <div class="card mb-3">
+          <div class="card-body">
+            <h6 class="card-title">Dependabot Stats</h6>
+            <div class="card-text small">
+              <strong>Total PRs:</strong> <%= number_with_delimiter(@repository.issues_count) %><br>
+              <strong>Merged PRs:</strong> <%= number_with_delimiter(@repository.merged_pull_requests_count || 0) %><br>
+              <strong>Avg close time:</strong> <%= distance_of_time_in_words_if_present @repository.avg_time_to_close_pull_request %><br>
+              <strong>Avg comments:</strong> <%= rounded_number_with_delimiter @repository.avg_comments_per_pull_request %>
+            </div>
+          </div>
         </div>
-        <div class='col-md-4'>
-          <h4>Pull Request Author Associations</h4>
-          <ul>
-            <% @repository.pull_request_author_associations_count.each do |author, count| %>
-              <li>
-                <%= author.humanize %>
-                (<%= number_with_delimiter count %>, <%= number_to_percentage count.to_f / @repository.pull_requests_count * 100, precision: 2 %>)
-              </li>
-            <% end %>
-          </ul>
+
+        <div class="card">
+          <div class="card-body">
+            <h6 class="card-title">Top Labels</h6>
+            <div class="card-text">
+              <% @repository.pull_request_labels_count.first(10).each do |label, count| %>
+                <%= link_to host_repository_path(@host, @repository, label: label), class: "text-decoration-none" do %>
+                  <span class="badge me-1 mb-1 <%= params[:label] == label ? 'bg-dark text-white' : 'bg-light text-dark' %>">
+                    <%= label %> (<%= count %>)
+                  </span>
+                <% end %>
+              <% end %>
+              
+              <% if params[:label].present? %>
+                <br><br>
+                <%= link_to "Show all PRs", host_repository_path(@host, @repository), class: "btn btn-sm btn-outline-primary" %>
+              <% end %>
+            </div>
+          </div>
         </div>
-      </div>
-      <hr>
       <% end %>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Top Issue Authors</h4>
-          <ul>
-            <% @repository.issue_authors.first(15).each do |author, count| %>
-              <li>
-                <%= link_to author, host_author_path(@host.name, author) %>
-                <% if bot?(author) %>
-                  <span title='bot'>🤖</span>
-                <% end %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-        <div class='col-md-4'>
-          <h4>Top Pull Request Authors</h4>
-          <ul>
-            <% @repository.pull_request_authors.first(15).each do |author, count| %>
-              <li>
-                <%= link_to author, host_author_path(@host.name, author) %>
-                <% if bot?(author) %>
-                  <span title='bot'>🤖</span>
-                <% end %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-      <hr/>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>All Maintainers</h4>
-          <ul>
-            <% @maintainers.each do |author, count| %>
-              <li>
-                <%= link_to author, host_author_path(@host.name, author) %>
-                <% if bot?(author) %>
-                  <span title='bot'>🤖</span>
-                <% end %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-        <div class='col-md-4'>
-          <h4>Active Maintainers</h4>
-          <ul>
-            <% @active_maintainers.each do |author, count| %>
-              <li>
-                <%= link_to author, host_author_path(@host.name, author) %>
-                <% if bot?(author) %>
-                  <span title='bot'>🤖</span>
-                <% end %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-      
-      <hr>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Top Issue Labels</h4>
-          <ul>
-            <% @repository.issue_labels_count.first(30).each do |label, count| %>
-              <li>
-                <%= label %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-        <div class='col-md-4'>
-          <h4>Top Pull Request Labels</h4>
-          <ul>
-            <% @repository.pull_request_labels_count.first(30).each do |label, count| %>
-              <li>
-                <%= label %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-
-    <% end %>
-  <% else %>
-    <p class="card-subtitle mb-2 text-muted"><i><small>
-        This repository has not been synced yet.
-
-        <% if @job && @job.in_progress? %>
-          <meta http-equiv=refresh content="3; url=<%= request.url %>">
-        <% end %>
-    </small></i></p>
-  <% end %>
-
-  
+    </div>
+  </div>
 
 </div>

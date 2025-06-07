@@ -34,8 +34,15 @@ class RepositoriesController < ApplicationController
       @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
       raise ActiveRecord::RecordNotFound unless @repository
     end
-    @maintainers = @repository.issues.maintainers.group(:user).count.sort_by{|k,v| -v }.first(15)
-    @active_maintainers = @repository.issues.maintainers.where('issues.created_at > ?', 1.year.ago).group(:user).count.sort_by{|k,v| -v }.first(15)
+    
+    # Get issues for the main content area with optional label filtering
+    scope = @repository.issues.includes(:host)
+    
+    if params[:label].present?
+      scope = scope.with_label(params[:label])
+    end
+    
+    @pagy, @issues = pagy(scope.order('created_at DESC'))
   end
 
   def charts

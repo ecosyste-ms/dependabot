@@ -196,4 +196,8 @@ class Repository < ApplicationRecord
   def sync
     sync_details
   end
+  
+  def avatar_url
+    "https://github.com/#{owner}.png"
+  end
 end

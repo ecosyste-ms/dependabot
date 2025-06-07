@@ -14,7 +14,7 @@ module ApplicationHelper
   end
 
   def app_description
-    'An index of dependabot pull requests across open source projects.'
+    'An open index of dependabot pull requests across open source projects.'
   end
 
   def obfusticate_email(email)

@@ -1,7 +1,89 @@
 <div class="container-sm">
-  <h1 class='mb-3'>
+  <h1 class='mb-4'>
     Recent Dependabot Pull Requests
   </h1>
+  
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-primary mb-1"><%= number_with_delimiter(@stats[:total_prs]) %></h4>
+          <p class="card-text small text-muted mb-0">Total PRs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-success mb-1"><%= number_with_delimiter(@stats[:merged_prs]) %></h4>
+          <p class="card-text small text-muted mb-0">Merged PRs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-info mb-1"><%= number_with_delimiter(@stats[:total_repositories]) %></h4>
+          <p class="card-text small text-muted mb-0">Repositories</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-warning mb-1"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
+          <p class="card-text small text-muted mb-0">Packages</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-secondary mb-1"><%= number_with_delimiter(@stats[:past_week_prs]) %></h4>
+          <p class="card-text small text-muted mb-0">Past Week</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-dark mb-1"><%= number_to_percentage((@stats[:merged_prs].to_f / @stats[:total_prs] * 100), precision: 0) %></h4>
+          <p class="card-text small text-muted mb-0">Merge Rate</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <%= octicon "graph", class: "me-2" %>
+        PR Activity - Past 30 Days
+      </h5>
+    </div>
+    <div class="card-body">
+      <%= column_chart chart_data_path, 
+          stacked: true, 
+          colors: ['#28a745', '#007bff', '#6c757d'],
+          height: '300px',
+          library: { 
+            scales: {
+              x: { 
+                stacked: true 
+              },
+              y: { 
+                stacked: true,
+                title: {
+                  display: true,
+                  text: 'Number of PRs'
+                }
+              }
+            }
+          } %>
+    </div>
+  </div>
 
   <% if @issues.any? %>
     <div class="row">
@@ -19,7 +101,7 @@
                   </h5>
                   
                   <h6 class="card-subtitle mb-2 text-muted">
-                    <%= link_to issue.repository.full_name, [issue.host, issue.repository, :issues], class: "text-decoration-none" %>
+                    <%= link_to issue.repository.full_name, [issue.host, issue.repository], class: "text-decoration-none" %>
                     #<%= issue.number %>
                   </h6>
                   
@@ -55,7 +137,7 @@
                 </div>
                 
                 <div class="flex-shrink-0">
-                  <img src="https://github.com/dependabot.png" class="rounded" height='40' width='40' alt="Dependabot">
+                  <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
                 </div>
               </div>
             </div>

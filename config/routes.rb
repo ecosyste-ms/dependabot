@@ -41,13 +41,14 @@ Rails.application.routes.draw do
       #   get 'charts', to: 'repositories#charts'
       #   get 'chart_data', to: 'repositories#chart_data'
       # end
-      resources :issues, constraints: { id: /.*/ }, only: [:index, :show]
+      resources :issues, constraints: { id: /.*/ }, only: [:show]
     end
     resources :authors, constraints: { id: /.*/ }, only: [:index, :show]
     resources :owners, constraints: { id: /.*/ }, only: [:index, :show]
   end
 
   get '/dependabot', to: 'issues#dependabot', as: :dependabot
+  get '/chart_data', to: 'home#chart_data', as: :chart_data
 
   resources :packages, only: [:index] do
     collection do
