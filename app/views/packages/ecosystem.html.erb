@@ -29,6 +29,89 @@
     </div>
   </div>
 
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-primary mb-1"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
+          <p class="card-text small text-muted mb-0">Packages</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-info mb-1"><%= number_with_delimiter(@stats[:total_updates]) %></h4>
+          <p class="card-text small text-muted mb-0">Total PRs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-warning mb-1"><%= number_with_delimiter(@stats[:unique_repositories]) %></h4>
+          <p class="card-text small text-muted mb-0">Repositories</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-success mb-1"><%= number_with_delimiter(@stats[:recent_activity]) %></h4>
+          <p class="card-text small text-muted mb-0">Past 30 Days</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-secondary mb-1"><%= number_with_delimiter(@stats[:avg_updates_per_package] || 0) %></h4>
+          <p class="card-text small text-muted mb-0">Avg per Package</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-dark mb-1"><%= @stats[:avg_updates_per_repo] || 0 %></h4>
+          <p class="card-text small text-muted mb-0">Avg per Repo</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <%= octicon "graph", class: "me-2" %>
+        <%= @ecosystem.capitalize %> PR Activity - Past 30 Days
+      </h5>
+    </div>
+    <div class="card-body">
+      <%= column_chart ecosystem_chart_data_packages_path(@ecosystem), 
+          stacked: true, 
+          colors: ['#28a745', '#007bff', '#6c757d'],
+          height: '300px',
+          dataset: { borderWidth: 1 },
+          library: { 
+            scales: {
+              x: { 
+                stacked: true 
+              },
+              y: { 
+                stacked: true,
+                title: {
+                  display: true,
+                  text: 'Number of PRs'
+                }
+              }
+            }
+          } %>
+    </div>
+  </div>
+
   <div class="row">
     <!-- Main Content -->
     <div class="col-lg-8">
@@ -83,25 +166,6 @@
           </h6>
         </div>
         <div class="card-body">
-          <div class="row mb-3">
-            <div class="col-12 text-center">
-              <h4 class="text-primary mb-0"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
-              <small class="text-muted">Total Packages</small>
-            </div>
-          </div>
-          
-          <div class="row mb-3">
-            <div class="col-6 text-center">
-              <h4 class="text-info mb-0"><%= number_with_delimiter(@stats[:total_updates]) %></h4>
-              <small class="text-muted">Total PRs</small>
-            </div>
-            <div class="col-6 text-center">
-              <h4 class="text-warning mb-0"><%= number_with_delimiter(@stats[:unique_repositories]) %></h4>
-              <small class="text-muted">Repositories</small>
-            </div>
-          </div>
-          
-          <hr>
           
           <h6>Pull Request Types</h6>
           <% if @stats[:update_types].any? %>
@@ -120,30 +184,11 @@
           
           <hr>
           
-          <h6>Activity</h6>
           <ul class="list-unstyled small">
-            <li class="mb-2">
-              <strong>Recent (30 days):</strong><br>
-              <%= number_with_delimiter(@stats[:recent_activity]) %> PRs
-            </li>
-            <% if @stats[:avg_updates_per_package] %>
-              <li class="mb-2">
-                <strong>Avg per Package:</strong><br>
-                <%= @stats[:avg_updates_per_package] %>
-              </li>
-            <% end %>
-            <% if @stats[:most_updated_package] %>
-              <li class="mb-2">
-                <strong>Most PRs:</strong><br>
-                <%= link_to show_packages_path(@stats[:most_updated_package].ecosystem, @stats[:most_updated_package].name), class: "text-decoration-none" do %>
-                  <code><%= truncate(@stats[:most_updated_package].name, length: 20) %></code>
-                <% end %>
-                (<%= @stats[:most_updated_package].issues_count %>)
-              </li>
-            <% end %>
+
             <% if @stats[:latest_update] %>
               <li class="mb-2">
-                <strong>Latest Update:</strong><br>
+                <strong>Latest Activity:</strong><br>
                 <%= time_ago_in_words(@stats[:latest_update].created_at) %> ago
               </li>
             <% end %>

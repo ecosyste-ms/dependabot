@@ -454,6 +454,55 @@ class IssueTest < ActiveSupport::TestCase
     assert_nil metadata
   end
 
+  test "handles package creation errors gracefully" do
+    issue = Issue.create!(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Test issue",
+      number: 999,
+      state: "open",
+      pull_request: true,
+      uuid: "test-uuid-graceful-error"
+    )
+
+    # Simulate metadata with invalid ecosystem
+    invalid_metadata = {
+      ecosystem: "invalid-ecosystem",
+      packages: [
+        { name: "test-package", old_version: "1.0.0", new_version: "2.0.0" }
+      ]
+    }
+
+    initial_package_count = Package.count
+
+    # This should not raise an exception
+    assert_nothing_raised do
+      issue.send(:create_package_associations, invalid_metadata)
+    end
+
+    # No packages should have been created
+    assert_equal initial_package_count, Package.count
+
+    # Valid ecosystem should still work
+    valid_metadata = {
+      ecosystem: "npm",
+      packages: [
+        { name: "test-valid-package", old_version: "1.0.0", new_version: "2.0.0" }
+      ]
+    }
+
+    assert_nothing_raised do
+      issue.send(:create_package_associations, valid_metadata)
+    end
+
+    # One package should have been created
+    assert_equal initial_package_count + 1, Package.count
+
+    # Clean up
+    Package.find_by(name: "test-valid-package")&.destroy
+  end
+
   private
 
   def create_dependabot_issue(title)

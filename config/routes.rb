@@ -53,6 +53,7 @@ Rails.application.routes.draw do
   resources :packages, only: [:index] do
     collection do
       get 'search'
+      get ':ecosystem/chart_data', to: 'packages#ecosystem_chart_data', as: :ecosystem_chart_data, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
     end

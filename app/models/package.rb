@@ -3,7 +3,7 @@ class Package < ApplicationRecord
   has_many :issues, through: :issue_packages
   
   validates :name, presence: true
-  validates :ecosystem, presence: true
+  validates :ecosystem, presence: true, inclusion: { in: -> { Issue::DEPENDABOT_ECOSYSTEMS.values.uniq }, message: "must be a supported Dependabot ecosystem" }
   validates :name, uniqueness: { scope: :ecosystem }
   
   scope :by_ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }

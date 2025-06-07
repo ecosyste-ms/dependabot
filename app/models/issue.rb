@@ -508,11 +508,23 @@ class Issue < ApplicationRecord
     metadata[:packages].each do |package_data|
       next unless package_data[:name]
       
-      # Find or create the package
-      package = Package.find_or_create_by(
-        name: package_data[:name],
-        ecosystem: metadata[:ecosystem]
-      )
+      # Find or create the package with error handling
+      package = Package.find_by(name: package_data[:name], ecosystem: metadata[:ecosystem])
+      
+      unless package
+        package = Package.new(name: package_data[:name], ecosystem: metadata[:ecosystem])
+        unless package.valid?
+          Rails.logger.warn "Failed to create package #{package_data[:name]} (#{metadata[:ecosystem]}): #{package.errors.full_messages.join(', ')}"
+          next # Skip this package and continue with the rest
+        end
+        
+        begin
+          package.save!
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.warn "Failed to save package #{package_data[:name]} (#{metadata[:ecosystem]}): #{e.message}"
+          next # Skip this package and continue with the rest
+        end
+      end
       
       # Create the association if it doesn't exist
       issue_package = issue_packages.find_or_initialize_by(package: package)
@@ -532,7 +544,13 @@ class Issue < ApplicationRecord
         pr_created_at: created_at
       )
       
-      issue_package.save! if issue_package.changed?
+      if issue_package.changed?
+        begin
+          issue_package.save!
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.warn "Failed to save issue_package for #{package_data[:name]}: #{e.message}"
+        end
+      end
     end
   end
   
@@ -632,15 +650,29 @@ class Issue < ApplicationRecord
       if response.code == '200'
         data = JSON.parse(response.body)
         
+        # Create reverse mapping from PURL types to Dependabot ecosystem names
+        # Handle duplicates by preferring exact matches (e.g., 'maven' over 'gradle' for maven PURL type)
+        purl_to_ecosystem = {}
+        Package::ECOSYSTEM_TO_PURL_TYPE.each do |ecosystem, purl_type|
+          # Prefer exact matches (e.g., maven -> maven over gradle -> maven)
+          if purl_to_ecosystem[purl_type].nil? || purl_type == ecosystem
+            purl_to_ecosystem[purl_type] = ecosystem
+          end
+        end
+        supported_purl_types = Package::ECOSYSTEM_TO_PURL_TYPE.values.uniq
+        
         # Filter packages to only include Dependabot-supported ecosystems
         supported_packages = data.select do |package|
           ecosystem = package['ecosystem']
-          ecosystem && DEPENDABOT_ECOSYSTEMS.values.include?(ecosystem)
+          ecosystem && supported_purl_types.include?(ecosystem)
         end
         
-        # Return the ecosystem of the first supported package
+        # Return the Dependabot ecosystem name for the first supported package
         first_supported_package = supported_packages.first
-        return first_supported_package['ecosystem'] if first_supported_package
+        if first_supported_package
+          ecosyste_ms_ecosystem = first_supported_package['ecosystem']
+          return purl_to_ecosystem[ecosyste_ms_ecosystem] || ecosyste_ms_ecosystem
+        end
       end
     rescue => e
       Rails.logger.warn "Failed to fetch ecosystem from packages API for #{repository_url}: #{e.message}"

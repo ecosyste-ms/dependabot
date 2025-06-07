@@ -20,20 +20,48 @@ class PackagesController < ApplicationController
     all_packages = Package.where(ecosystem: @ecosystem)
     issue_packages = IssuePackage.joins(:package).where(packages: { ecosystem: @ecosystem })
     
+    unique_repositories_count = Issue.joins(issue_packages: :package)
+                                  .where(packages: { ecosystem: @ecosystem })
+                                  .distinct.count(:repository_id)
+    
     @stats = {
       total_packages: all_packages.count,
       total_updates: issue_packages.count,
-      unique_repositories: Issue.joins(issue_packages: :package)
-                                .where(packages: { ecosystem: @ecosystem })
-                                .distinct.count(:repository_id),
+      unique_repositories: unique_repositories_count,
       update_types: issue_packages.group(:update_type).count,
       recent_activity: issue_packages.where('pr_created_at > ?', 30.days.ago).count,
       avg_updates_per_package: all_packages.where('issues_count > 0').average(:issues_count)&.round(1),
+      avg_updates_per_repo: (unique_repositories_count > 0 ? (issue_packages.count.to_f / unique_repositories_count).round(1) : 0),
       most_updated_package: all_packages.order(:issues_count).last,
       latest_update: Issue.joins(issue_packages: :package)
                           .where(packages: { ecosystem: @ecosystem })
                           .order(:created_at).last
     }
+  end
+
+  def ecosystem_chart_data
+    @ecosystem = params[:ecosystem]
+    
+    # Chart data for past 30 days PR activity for this ecosystem
+    start_date = 30.days.ago
+    scope = Issue.joins(issue_packages: :package)
+                 .where(packages: { ecosystem: @ecosystem })
+                 .where(created_at: start_date..)
+    
+    # Get counts for each status using groupdate
+    open_data = scope.where(state: 'open').group_by_day(:created_at, last: 30).count
+    merged_data = scope.where.not(merged_at: nil).group_by_day(:created_at, last: 30).count  
+    closed_data = scope.where(state: 'closed', merged_at: nil).group_by_day(:created_at, last: 30).count
+    
+    # Format for chartkick stacked chart
+    result = [
+      { name: 'Open', data: open_data },
+      { name: 'Merged', data: merged_data },
+      { name: 'Closed', data: closed_data }
+    ]
+    
+    expires_in 1.hour, public: true
+    render json: result
   end
 
   def show
