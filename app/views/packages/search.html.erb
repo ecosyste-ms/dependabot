@@ -13,7 +13,6 @@
   <div class="row mb-4">
     <div class="col-lg-6">
       <h1 class="mb-3">
-        <%= octicon "search", class: "me-2" %>
         Search Packages
       </h1>
       <% if @query.present? %>
@@ -51,33 +50,48 @@
 
   <% if @query.present? %>
     <% if @packages.any? %>
-      <div class="row">
-        <% @packages.each do |package| %>
-          <div class="col-md-6 col-lg-4 mb-3">
-            <div class="card h-100">
-              <div class="card-body">
-                <h5 class="card-title">
-                  <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
-                    <code><%= package.name %></code>
+      <% @packages.each do |package| %>
+        <% registry = @ecosystem_registries[package.ecosystem] %>
+        <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
+          <div class="card border-0 shadow-sm package-card mb-3">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center">
+                <div class="ecosystem-icon flex-shrink-0 me-3">
+                  <% if registry&.dig('icon_url') %>
+                    <img src="<%= registry['icon_url'] %>" alt="<%= package.ecosystem %>" class="rounded" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.style.display='none'">
+                  <% else %>
+                    <div class="bg-primary rounded d-flex align-items-center justify-content-center text-white fw-bold" style="width: 40px; height: 40px; font-size: 16px;">
+                      <%= package.ecosystem.first.upcase %>
+                    </div>
                   <% end %>
-                </h5>
-                <p class="card-text">
-                  <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
-                  <span class="text-muted">
-                    <%= pluralize package.issues_count, 'update' %>
+                </div>
+                
+                <div class="flex-grow-1 min-width-0 me-3">
+                  <div class="d-flex align-items-center mb-1">
+                    <h5 class="mb-0 me-2"><code><%= package.name %></code></h5>
+                    <span class="badge bg-light text-dark small"><%= package.ecosystem %></span>
+                  </div>
+                  <div class="text-muted small">
+                    <%= pluralize package.issues_count, 'update' %> • PURL: <code class="text-muted"><%= package.purl %></code>
+                  </div>
+                </div>
+                
+                <div class="text-end flex-shrink-0">
+                  <div class="fw-semibold text-primary fs-5"><%= number_with_delimiter(package.issues_count) %></div>
+                  <div class="text-muted small">updates</div>
+                </div>
+                
+                <div class="ms-3 flex-shrink-0">
+                  <span class="btn btn-outline-primary btn-sm">
+                    View PRs
+                    <%= octicon "arrow-right", class: "ms-1" %>
                   </span>
-                </p>
-                <p class="card-text">
-                  <small class="text-muted">
-                    PURL: <code><%= package.purl %></code>
-                  </small>
-                </p>
-                <%= link_to "View PRs", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
+                </div>
               </div>
             </div>
           </div>
         <% end %>
-      </div>
+      <% end %>
       
       <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     <% else %>

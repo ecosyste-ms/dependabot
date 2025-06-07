@@ -12,16 +12,31 @@
 
   <div class="row mb-4">
     <div class="col-lg-8">
-      <h1 class="mb-3">
-        <span class="badge bg-primary fs-3 me-2"><%= @ecosystem %></span>
-        Packages
-      </h1>
+      <div class="d-flex align-items-start mb-3">
+        <div class="flex-grow-1 min-width-0 me-3">
+          <h1 class="mb-1"><%= @ecosystem %></h1>
+          <% if @registry_data&.dig('name') && @registry_data['name'] != @ecosystem %>
+            <p class="text-muted small mb-0"><%= @registry_data['name'] %></p>
+          <% end %>
+        </div>
+        
+        <div class="ecosystem-icon">
+          <% if @registry_data&.dig('icon_url') %>
+            <img src="<%= @registry_data['icon_url'] %>" alt="<%= @ecosystem %>" class="rounded" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'">
+          <% else %>
+            <div class="bg-primary rounded d-flex align-items-center justify-content-center text-white fw-bold" style="width: 48px; height: 48px; font-size: 18px;">
+              <%= @ecosystem.first.upcase %>
+            </div>
+          <% end %>
+        </div>
+      </div>
       <p class="text-muted">
         Packages in the <%= @ecosystem %> ecosystem that have been updated by Dependabot.
       </p>
     </div>
     <div class="col-lg-4">
       <%= form_with url: search_packages_path, method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.hidden_field :ecosystem, value: @ecosystem %>
         <%= form.text_field :q, placeholder: "Search packages...", class: "form-control me-2", value: params[:q] %>
         <%= form.submit "Search", class: "btn btn-outline-secondary" %>
       <% end %>
@@ -116,33 +131,35 @@
     <div class="col-lg-8">
       <% if @packages.any? %>
         <% @packages.each do |package| %>
-          <div class="card mb-3">
-            <div class="card-body">
-              <div class="row align-items-center">
-                <div class="col-md-8">
-                  <h5 class="card-title mb-1">
-                    <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
-                      <code><%= package.name %></code>
-                    <% end %>
-                  </h5>
-                  <p class="card-text mb-2">
-                    <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
-                    <span class="text-muted">
-                      <%= pluralize package.issues_count, 'update' %>
+          <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
+            <div class="card border-0 shadow-sm package-card mb-3">
+              <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                  <div class="flex-grow-1 min-width-0 me-3">
+                    <div class="d-flex align-items-center mb-1">
+                      <h5 class="mb-0 me-2"><code><%= package.name %></code></h5>
+                      <span class="badge bg-light text-dark small"><%= package.ecosystem %></span>
+                    </div>
+                    <div class="text-muted small">
+                      <%= pluralize package.issues_count, 'update' %> • PURL: <code class="text-muted"><%= package.purl %></code>
+                    </div>
+                  </div>
+                  
+                  <div class="text-end flex-shrink-0">
+                    <div class="fw-semibold text-primary fs-5"><%= number_with_delimiter(package.issues_count) %></div>
+                    <div class="text-muted small">updates</div>
+                  </div>
+                  
+                  <div class="ms-3 flex-shrink-0">
+                    <span class="btn btn-outline-primary btn-sm">
+                      View PRs
+                      <%= octicon "arrow-right", class: "ms-1" %>
                     </span>
-                  </p>
-                  <p class="card-text mb-0">
-                    <small class="text-muted">
-                      PURL: <code><%= package.purl %></code>
-                    </small>
-                  </p>
-                </div>
-                <div class="col-md-4 text-end">
-                  <%= link_to "View PRs", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary" %>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          <% end %>
         <% end %>
         
         <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>

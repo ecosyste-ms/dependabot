@@ -145,6 +145,18 @@ class PackagesController < ApplicationController
       end
       
       @pagy, @packages = pagy(packages)
+      
+      # Fetch registry metadata for each ecosystem in search results
+      @ecosystem_registries = {}
+      @packages.map(&:ecosystem).uniq.each do |ecosystem|
+        sample_package = Package.where(ecosystem: ecosystem)
+                               .where.not(metadata: nil)
+                               .where("LENGTH(metadata::text) > 2")
+                               .first
+        if sample_package&.metadata&.dig('registry')
+          @ecosystem_registries[ecosystem] = sample_package.metadata['registry']
+        end
+      end
     else
       # When no search query, show all ecosystems
       @ecosystems = Package.where('issues_count > 0').distinct.pluck(:ecosystem).sort
