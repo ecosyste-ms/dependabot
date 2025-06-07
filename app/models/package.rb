@@ -30,6 +30,7 @@ class Package < ApplicationRecord
     'actions' => 'githubactions',  # GitHub Actions
     'elm' => 'elm',
     'swift' => 'swift',
+    'swiftpm' => 'swift',
     'cocoapods' => 'cocoapods',
     'carthage' => 'carthage',
     'conda' => 'conda',

@@ -632,9 +632,15 @@ class Issue < ApplicationRecord
       if response.code == '200'
         data = JSON.parse(response.body)
         
-        # The API returns an array of packages, get the first one
-        first_package = data.first
-        return first_package['ecosystem'] if first_package && first_package['ecosystem']
+        # Filter packages to only include Dependabot-supported ecosystems
+        supported_packages = data.select do |package|
+          ecosystem = package['ecosystem']
+          ecosystem && DEPENDABOT_ECOSYSTEMS.values.include?(ecosystem)
+        end
+        
+        # Return the ecosystem of the first supported package
+        first_supported_package = supported_packages.first
+        return first_supported_package['ecosystem'] if first_supported_package
       end
     rescue => e
       Rails.logger.warn "Failed to fetch ecosystem from packages API for #{repository_url}: #{e.message}"
