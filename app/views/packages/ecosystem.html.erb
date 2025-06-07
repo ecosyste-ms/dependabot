@@ -185,13 +185,17 @@
           
           <h6>Pull Request Types</h6>
           <% if @stats[:update_types].any? %>
+            <% total_updates = @stats[:update_types].values.sum %>
             <% @stats[:update_types].each do |type, count| %>
               <% next if type.nil? %>
               <div class="d-flex justify-content-between mb-2">
                 <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : type == 'removal' ? 'danger' : 'success' %>">
                   <%= type&.capitalize || 'Other' %>
                 </span>
-                <span><%= number_with_delimiter(count) %></span>
+                <span>
+                  <%= number_with_delimiter(count) %>
+                  <small class="text-muted">(<%= (count.to_f / total_updates * 100).round(1) %>%)</small>
+                </span>
               </div>
             <% end %>
           <% else %>

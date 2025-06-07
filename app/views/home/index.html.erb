@@ -87,90 +87,64 @@
   </div>
 
   <% if @issues.any? %>
-    <div class="row">
-      <% @issues.each do |issue| %>
-        <div class="col-12 mb-3">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-start">
-                <div class="flex-grow-1">
-                  <h5 class="card-title">
-                    <%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
-                      <%= octicon "git-pull-request", class: "text-success me-2" %>
-                      <%= issue.title %>
-                    <% end %>
-                  </h5>
-                  
-                  <h6 class="card-subtitle mb-2 text-muted">
-                    <%= link_to issue.repository.full_name, [issue.host, issue.repository], class: "text-decoration-none" %>
-                    #<%= issue.number %>
-                  </h6>
-                  
-                  <% issue_packages_array = issue.issue_packages.to_a %>
-                  <% if issue_packages_array.size > 0 %>
-                    <div class="mb-2">
-                      <% issue_packages_array.first(2).each do |issue_package| %>
-                        <%= link_to show_packages_path(issue_package.package.ecosystem, issue_package.package.name), class: "text-decoration-none me-2" do %>
-                          <span class="badge bg-primary">
-                            <%= octicon "package", class: "me-1" %>
-                            <%= issue_package.package.name %>
-                            <% if issue_package.version_change %>
-                              <small class="ms-1"><%= issue_package.version_change %></small>
-                            <% end %>
-                          </span>
-                        <% end %>
-                        <% if issue_package.update_type %>
-                          <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %> me-1">
-                            <%= issue_package.update_type %>
-                          </span>
-                        <% end %>
-                      <% end %>
-                      <% if issue_packages_array.size > 2 %>
-                        <span class="badge bg-secondary">+<%= issue_packages_array.size - 2 %> more</span>
-                      <% end %>
-                    </div>
+    <% @issues.each do |issue| %>
+      <%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
+        <div class="card border-0 shadow-sm package-card mb-3">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-start">
+              <div class="flex-grow-1 min-width-0 me-3">
+                <div class="mb-1">
+                  <h5 class="mb-1"><%= issue.title %></h5>
+                  <% effective_state = issue.effective_state %>
+                  <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
+                    <%= effective_state.capitalize %>
+                  </span>
+                  <span class="text-muted small">
+                    <%= time_ago_in_words(issue.created_at) %> ago
+                  </span>
+                  <% if issue.comments_count && issue.comments_count > 0 %>
+                    <span class="text-muted small ms-2">
+                      • <%= pluralize issue.comments_count, 'comment' %>
+                    </span>
                   <% end %>
-                  
-                  <p class="card-text text-muted">
-                    <small>
-                      <% effective_state = issue.effective_state %>
-                      <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
-                        <%= effective_state.capitalize %>
-                      </span>
-                      
-                      <%= octicon "clock", class: "me-1" %>
-                      <%= time_ago_in_words(issue.created_at) %> ago
-                      
-                      <% if issue.comments_count && issue.comments_count > 0 %>
-                        <%= octicon "comment", class: "ms-3 me-1" %>
-                        <%= pluralize issue.comments_count, 'comment' %>
-                      <% end %>
-                      
-                      <% if issue.merged_at %>
-                        <%= octicon "git-merge", class: "text-success ms-3 me-1" %>
-                        Merged
-                      <% end %>
-                      
-                      <% if issue.labels.any? %>
-                        <div class="mt-2">
-                          <% issue.labels.each do |label| %>
-                            <span class="badge bg-light text-dark me-1"><%= label %></span>
-                          <% end %>
-                        </div>
-                      <% end %>
-                    </small>
-                  </p>
                 </div>
                 
-                <div class="flex-shrink-0">
-                  <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
+                <div class="text-muted small mb-2">
+                  <%= issue.repository.full_name %> #<%= issue.number %>
                 </div>
+                
+                <% issue_packages_array = issue.issue_packages.to_a %>
+                <% if issue_packages_array.size > 0 %>
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    <% issue_packages_array.first(2).each do |issue_package| %>
+                      <span class="badge bg-light text-dark small">
+                        <%= issue_package.package.ecosystem %>:<%= issue_package.package.name %>
+                        <% if issue_package.version_change %>
+                          <span class="ms-1"><%= issue_package.version_change %></span>
+                        <% end %>
+                      </span>
+                      <% if issue_package.update_type %>
+                        <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %> small">
+                          <%= issue_package.update_type %>
+                        </span>
+                      <% end %>
+                    <% end %>
+                    <% if issue_packages_array.size > 2 %>
+                      <span class="badge bg-secondary small">+<%= issue_packages_array.size - 2 %> more</span>
+                    <% end %>
+                  </div>
+                <% end %>
+                
+              </div>
+              
+              <div class="flex-shrink-0">
+                <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
               </div>
             </div>
           </div>
         </div>
       <% end %>
-    </div>
+    <% end %>
     
     <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
   <% else %>

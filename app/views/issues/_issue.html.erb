@@ -1,30 +1,59 @@
-<div class="card mb-3 repository d-flex" id="issue_<%= issue.id %>">
-  <div class="card-body pb-1">
-    <div class="d-flex">
-      
-      <div class="flex-grow-1 ms-3 text-break">
-        <h5 class='card-title'>
-          <%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
-            #<%= issue.number %> - <%= issue.title %>
-          <% end %>
-        </h5>
-      
-        <p class="card-subtitle mb-2 text-muted"><i><small>
-          <%= issue.pull_request ? 'Pull Request' : 'Issue' %> -
-          State: <%= issue.state %> - Opened <%= time_ago_in_words(issue.created_at) %> ago
-          <% if issue.comments_count.to_i > 0 %>
-            - <%= pluralize issue.comments_count, 'comment' %>   
-          <% end %>
-          <br />
+<%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
+  <div class="card border-0 shadow-sm package-card mb-3" id="issue_<%= issue.id %>">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-start">
+        <div class="flex-grow-1 min-width-0 me-3">
+          <div class="mb-1">
+            <h5 class="mb-1">#<%= issue.number %> - <%= issue.title %></h5>
+            <% effective_state = issue.effective_state %>
+            <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
+              <%= effective_state.capitalize %>
+            </span>
+            <span class="text-muted small">
+              <%= time_ago_in_words(issue.created_at) %> ago
+            </span>
+            <% if issue.comments_count && issue.comments_count > 0 %>
+              <span class="text-muted small ms-2">
+                • <%= pluralize issue.comments_count, 'comment' %>
+              </span>
+            <% end %>
+          </div>
+          
           <% if issue.labels.any? %>
-          Labels: <%= issue.labels.join(', ') %>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <% issue.labels.each do |label| %>
+                <span class="badge bg-light text-dark small"><%= label %></span>
+              <% end %>
+            </div>
           <% end %>
-        </small></i></p>
+          
+          <% issue_packages_array = issue.issue_packages.to_a %>
+          <% if issue_packages_array.size > 0 %>
+            <div class="d-flex flex-wrap gap-1">
+              <% issue_packages_array.first(3).each do |issue_package| %>
+                <span class="badge bg-light text-dark small">
+                  <%= issue_package.package.ecosystem %>:<%= issue_package.package.name %>
+                  <% if issue_package.version_change %>
+                    <span class="ms-1"><%= issue_package.version_change %></span>
+                  <% end %>
+                </span>
+                <% if issue_package.update_type %>
+                  <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %> small">
+                    <%= issue_package.update_type %>
+                  </span>
+                <% end %>
+              <% end %>
+              <% if issue_packages_array.size > 3 %>
+                <span class="badge bg-secondary small">+<%= issue_packages_array.size - 3 %> more</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        
+        <div class="flex-shrink-0">
+          <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
+        </div>
       </div>
-      <div class="flex-shrink-0">
-        <%# todo avatar url %>
-        <img src="" class="rounded" height='40' width='40' onerror="this.style.display='none'">
-      </div>  
     </div>
   </div>
-</div>
+<% end %>

@@ -1,9 +1,9 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  name: MyString
-  ecosystem: MyString
+npm_package:
+  name: lodash
+  ecosystem: npm
 
-two:
-  name: MyString
-  ecosystem: MyString
+rubygems_package:
+  name: rails
+  ecosystem: rubygems

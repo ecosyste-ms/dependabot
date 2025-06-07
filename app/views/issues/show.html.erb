@@ -27,7 +27,7 @@
           </div>
           <div class="flex-shrink-0">
             <% effective_state = @issue.effective_state %>
-            <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> fs-6">
+            <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> fs-6">
               <%= effective_state.capitalize %>
             </span>
           </div>
@@ -40,7 +40,7 @@
               <strong>Type:</strong> <%= @issue.pull_request ? 'Pull Request' : 'Issue' %><br>
               <strong>State:</strong> 
               <% effective_state = @issue.effective_state %>
-              <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %>">
+              <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %>">
                 <%= effective_state.capitalize %>
               </span>
               <% if @issue.state_reason && effective_state != 'merged' %>

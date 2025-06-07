@@ -18,6 +18,7 @@ Rails.application.routes.draw do
       
       resources :packages, only: [:index] do
         collection do
+          get 'lookup', to: 'packages#lookup'
           get 'ecosystems'
           get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
           get ':ecosystem', to: 'packages#index', constraints: { ecosystem: /[^\/]+/ }

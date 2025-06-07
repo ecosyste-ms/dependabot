@@ -40,6 +40,7 @@ gem "redis"
 gem "postgresql_cursor"
 gem 'ostruct'
 gem 'faraday-multipart'
+gem 'packageurl-ruby'
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mingw x64_mingw ]

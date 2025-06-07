@@ -112,7 +112,7 @@
                     <small class="text-muted">
                       <% effective_state = issue.effective_state %>
                       <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(status: effective_state)), class: "text-decoration-none" do %>
-                        <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
+                        <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
                           <%= effective_state.capitalize %>
                         </span>
                       <% end %>
