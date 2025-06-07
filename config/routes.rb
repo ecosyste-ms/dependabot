@@ -24,6 +24,10 @@ Rails.application.routes.draw do
         end
       end
       
+      resources :issues, only: [] do
+        resources :packages, only: [:index], controller: 'issue_packages'
+      end
+      
       resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
         resources :repositories, constraints: { id: /.*/ }, only: [:index, :show] do
           resources :issues, constraints: { id: /.*/ }, only: [:index, :show]

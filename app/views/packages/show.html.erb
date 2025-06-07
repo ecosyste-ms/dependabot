@@ -168,6 +168,13 @@
               <td><strong>Package URL:</strong></td>
               <td><code><%= @package.purl %></code></td>
             </tr>
+            <tr>
+              <td><strong>JSON API:</strong></td>
+              <td>
+                <%= link_to "View JSON", show_api_v1_packages_path(@package.ecosystem, @package.name, format: :json), target: "_blank", class: "text-decoration-none" %>
+                <%= octicon "link-external", height: 12 %>
+              </td>
+            </tr>
           </table>
         </div>
       </div>

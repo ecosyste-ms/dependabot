@@ -10,7 +10,7 @@ class HomeController < ApplicationController
       merged_prs: Issue.where.not(merged_at: nil).count,
       total_repositories: Repository.where('issues_count > 0').count,
       total_packages: Package.where('issues_count > 0').count,
-      past_week_prs: Issue.where('created_at > ?', 1.week.ago).count
+      total_ecosystems: Package.distinct.count(:ecosystem)
     }
     
     expires_in 1.hour, public: true

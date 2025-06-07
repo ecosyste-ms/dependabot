@@ -4,6 +4,28 @@ class PackagesController < ApplicationController
   def index
     @ecosystem_counts = Package.group(:ecosystem).count
     @ecosystems = @ecosystem_counts.sort_by { |ecosystem, count| -count }.map(&:first)
+    @total_packages = Package.count
+    
+    # Fetch a sample package from each ecosystem to get registry metadata
+    @ecosystem_registries = {}
+    @per_packita = {}
+    @ecosystems.each do |ecosystem|
+      sample_package = Package.where(ecosystem: ecosystem)
+                             .where.not(metadata: nil)
+                             .where("LENGTH(metadata::text) > 2")
+                             .first
+      if sample_package&.metadata&.dig('registry')
+        registry = sample_package.metadata['registry']
+        @ecosystem_registries[ecosystem] = registry
+        
+        # Calculate "per packita" - percentage of total registry packages with Dependabot activity
+        if registry['packages_count'] && registry['packages_count'] > 0
+          dependabot_packages = @ecosystem_counts[ecosystem]
+          total_registry_packages = registry['packages_count']
+          @per_packita[ecosystem] = (dependabot_packages.to_f / total_registry_packages * 100).round(2)
+        end
+      end
+    end
   end
 
   def ecosystem
@@ -24,6 +46,13 @@ class PackagesController < ApplicationController
                                   .where(packages: { ecosystem: @ecosystem })
                                   .distinct.count(:repository_id)
     
+    # Get registry metadata for this ecosystem
+    sample_package = Package.where(ecosystem: @ecosystem)
+                           .where.not(metadata: nil)
+                           .where("LENGTH(metadata::text) > 2")
+                           .first
+    @registry_data = sample_package&.metadata&.dig('registry')
+    
     @stats = {
       total_packages: all_packages.count,
       total_updates: issue_packages.count,
@@ -37,6 +66,11 @@ class PackagesController < ApplicationController
                           .where(packages: { ecosystem: @ecosystem })
                           .order(:created_at).last
     }
+    
+    # Calculate per packita if registry data is available
+    if @registry_data && @registry_data['packages_count'] && @registry_data['packages_count'] > 0
+      @per_packita = (@stats[:total_packages].to_f / @registry_data['packages_count'] * 100).round(2)
+    end
   end
 
   def ecosystem_chart_data

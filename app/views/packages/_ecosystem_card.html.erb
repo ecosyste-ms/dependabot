@@ -1,0 +1,55 @@
+<div class="col-md-6 col-xl-4 mb-4">
+  <% registry = @ecosystem_registries[ecosystem] %>
+  <%= link_to ecosystem_packages_path(ecosystem), class: "text-decoration-none" do %>
+    <div class="card h-100 border-0 shadow-sm ecosystem-card">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start mb-3">
+          <div class="flex-grow-1 min-width-0 me-3">
+            <div class="d-flex align-items-center mb-1">
+              <h5 class="card-title mb-0 me-2"><%= ecosystem %></h5>
+              <span class="badge bg-light text-dark small"><%= (@ecosystem_counts[ecosystem].to_f / @total_packages * 100).round(1) %>%</span>
+            </div>
+            <% if registry&.dig('name') && registry['name'] != ecosystem %>
+              <p class="text-muted small mb-0"><%= registry['name'] %></p>
+            <% end %>
+          </div>
+          
+          <div class="ecosystem-icon">
+            <% if registry&.dig('icon_url') %>
+              <img src="<%= registry['icon_url'] %>" alt="<%= ecosystem %>" class="rounded" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'">
+            <% else %>
+              <div class="bg-primary rounded d-flex align-items-center justify-content-center text-white fw-bold" style="width: 48px; height: 48px; font-size: 18px;">
+                <%= ecosystem.first.upcase %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        
+        <% if registry&.dig('description') %>
+          <p class="card-text text-muted small mb-3" style="line-height: 1.4;">
+            <%= truncate(registry['description'], length: 90) %>
+          </p>
+        <% end %>
+        
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="fw-semibold text-primary fs-5"><%= number_with_delimiter(@ecosystem_counts[ecosystem]) %></div>
+            <div class="text-muted small">
+              packages
+              <% if @per_packita && @per_packita[ecosystem] %>
+                <span class="text-success">• <%= @per_packita[ecosystem] %>% per packita</span>
+              <% end %>
+            </div>
+          </div>
+          
+          <div class="text-end">
+            <span class="btn btn-outline-primary btn-sm">
+              Browse
+              <%= octicon "arrow-right", class: "ms-1" %>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

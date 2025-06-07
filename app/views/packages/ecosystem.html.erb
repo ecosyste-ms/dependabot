@@ -13,7 +13,6 @@
   <div class="row mb-4">
     <div class="col-lg-8">
       <h1 class="mb-3">
-        <%= octicon "package", class: "me-2" %>
         <span class="badge bg-primary fs-3 me-2"><%= @ecosystem %></span>
         Packages
       </h1>
@@ -184,8 +183,55 @@
           
           <hr>
           
+          <% if @registry_data %>
+            <h6>Registry Information</h6>
+            <ul class="list-unstyled small mb-3">
+              <% if @registry_data['name'] %>
+                <li class="mb-2">
+                  <strong>Registry:</strong><br>
+                  <% if @registry_data['url'] %>
+                    <%= link_to @registry_data['name'], "https://packages.ecosyste.ms/registries/#{@registry_data['name']}", target: :_blank, class: "text-decoration-none" %>
+                    <%= octicon "link-external", class: "ms-1 text-muted", height: 12 %>
+                  <% else %>
+                    <%= @registry_data['name'] %>
+                  <% end %>
+                </li>
+              <% end %>
+              
+              <% if @registry_data['packages_count'] %>
+                <li class="mb-2">
+                  <strong>Total Packages:</strong><br>
+                  <%= number_with_delimiter(@registry_data['packages_count']) %>
+                </li>
+              <% end %>
+              
+              <% if @per_packita %>
+                <li class="mb-2">
+                  <strong>Per Packita:</strong><br>
+                  <span class="text-success"><%= @per_packita %>%</span>
+                  <small class="text-muted d-block">of registry packages with Dependabot activity</small>
+                </li>
+              <% end %>
+              
+              <% if @registry_data['maintainers_count'] && @registry_data['maintainers_count'] > 0 %>
+                <li class="mb-2">
+                  <strong>Maintainers:</strong><br>
+                  <%= number_with_delimiter(@registry_data['maintainers_count']) %>
+                </li>
+              <% end %>
+              
+              <% if @registry_data['namespaces_count'] && @registry_data['namespaces_count'] > 0 %>
+                <li class="mb-2">
+                  <strong>Namespaces:</strong><br>
+                  <%= number_with_delimiter(@registry_data['namespaces_count']) %>
+                </li>
+              <% end %>
+            </ul>
+            
+            <hr>
+          <% end %>
+          
           <ul class="list-unstyled small">
-
             <% if @stats[:latest_update] %>
               <li class="mb-2">
                 <strong>Latest Activity:</strong><br>

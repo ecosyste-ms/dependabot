@@ -182,6 +182,34 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/IssuePackage'
+  /issues/{issueId}/packages:
+    get:
+      summary: "Get packages for a specific issue"
+      operationId: "getIssuePackages"
+      parameters:
+        - in: path
+          name: issueId
+          schema:
+            type: integer
+          required: true
+          description: "issue ID"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue_packages:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/IssuePackage'
+                        - type: object
+                          properties:
+                            package:
+                              $ref: '#/components/schemas/Package'
   /repositories/lookup:
     get:
       summary: "Lookup repository metadata"
