@@ -1,10 +1,17 @@
 class HostsController < ApplicationController
   def index
-    @hosts = Host.all.visible.order('repositories_count DESC')
-
-    @scope = Repository.visible.order('last_synced_at DESC').includes(:host)
-    @pagy, @repositories = pagy_countless(@scope, items: 10)
-    fresh_when(@repositories, public: true)
+    github_host = Host.find_by(name: 'GitHub')
+    if github_host
+      redirect_to host_path(github_host)
+    else
+      # Fallback to first host if GitHub not found
+      first_host = Host.first
+      if first_host
+        redirect_to host_path(first_host)
+      else
+        redirect_to root_path
+      end
+    end
   end
 
   def show

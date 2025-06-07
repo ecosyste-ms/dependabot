@@ -1,0 +1,29 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  filename: MyString
+  imported_at: 2025-06-07 09:46:48
+  dependabot_count: 1
+  pr_count: 1
+  comment_count: 1
+  review_count: 1
+  review_comment_count: 1
+  review_thread_count: 1
+  created_count: 1
+  updated_count: 1
+  success: false
+  error_message: MyText
+
+two:
+  filename: MyString
+  imported_at: 2025-06-07 09:46:48
+  dependabot_count: 1
+  pr_count: 1
+  comment_count: 1
+  review_count: 1
+  review_comment_count: 1
+  review_thread_count: 1
+  created_count: 1
+  updated_count: 1
+  success: false
+  error_message: MyText

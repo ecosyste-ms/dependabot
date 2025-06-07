@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_06_201154) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_07_085521) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -35,6 +35,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_06_201154) do
     t.integer "issues_count"
     t.integer "pull_requests_count"
     t.integer "authors_count"
+  end
+
+  create_table "imports", force: :cascade do |t|
+    t.string "filename"
+    t.datetime "imported_at"
+    t.integer "dependabot_count"
+    t.integer "pr_count"
+    t.integer "comment_count"
+    t.integer "review_count"
+    t.integer "review_comment_count"
+    t.integer "review_thread_count"
+    t.integer "created_count"
+    t.integer "updated_count"
+    t.boolean "success"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "issue_packages", force: :cascade do |t|
@@ -87,6 +104,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_06_201154) do
     t.integer "changed_files"
     t.string "merged_by"
     t.string "closed_by"
+    t.index ["created_at"], name: "index_issues_on_created_at"
     t.index ["host_id", "user"], name: "index_issues_on_host_id_and_user"
     t.index ["repository_id"], name: "index_issues_on_repository_id"
   end
@@ -110,6 +128,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_06_201154) do
     t.integer "issues_count", default: 0, null: false
     t.string "repository_url"
     t.json "metadata", default: {}
+    t.index "lower((repository_url)::text)", name: "index_packages_on_lower_repository_url"
     t.index ["issues_count"], name: "index_packages_on_issues_count"
     t.index ["name", "ecosystem"], name: "index_packages_on_name_and_ecosystem", unique: true
   end

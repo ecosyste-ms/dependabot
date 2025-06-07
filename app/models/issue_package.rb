@@ -4,14 +4,15 @@ class IssuePackage < ApplicationRecord
   
   validates :issue_id, uniqueness: { scope: :package_id }
   
-  # Semantic version update types
-  UPDATE_TYPES = %w[major minor patch].freeze
+  # Update types including removals
+  UPDATE_TYPES = %w[major minor patch removal].freeze
   
   validates :update_type, inclusion: { in: UPDATE_TYPES }, allow_nil: true
   
   scope :major_updates, -> { where(update_type: 'major') }
   scope :minor_updates, -> { where(update_type: 'minor') }
   scope :patch_updates, -> { where(update_type: 'patch') }
+  scope :removals, -> { where(update_type: 'removal') }
   
   # Time-based scopes for quick graphing
   scope :created_after, ->(date) { where('pr_created_at > ?', date) }
@@ -22,7 +23,12 @@ class IssuePackage < ApplicationRecord
   scope :past_week, -> { where('pr_created_at > ?', 1.week.ago) }
   
   def version_change
-    return nil unless old_version && new_version
-    "#{old_version} → #{new_version}"
+    if update_type == 'removal'
+      old_version ? "#{old_version} → removed" : "removed"
+    elsif old_version && new_version
+      "#{old_version} → #{new_version}"
+    else
+      nil
+    end
   end
 end

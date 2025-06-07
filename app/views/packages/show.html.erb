@@ -50,10 +50,30 @@
 
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0">
-            <%= octicon "git-pull-request", class: "me-2" %>
-            Recent PRs
-          </h5>
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <%= octicon "git-pull-request", class: "me-2" %>
+              Recent PRs
+              <% if params[:status].present? || params[:type].present? %>
+                <small class="text-muted">
+                  (filtered by: 
+                  <% if params[:status].present? %>
+                    <%= params[:status].capitalize %>
+                  <% end %>
+                  <% if params[:status].present? && params[:type].present? %>
+                    , 
+                  <% end %>
+                  <% if params[:type].present? %>
+                    <%= params[:type].capitalize %> PRs
+                  <% end %>
+                  )
+                </small>
+              <% end %>
+            </h5>
+            <% if params[:status].present? || params[:type].present? %>
+              <%= link_to "Clear filter", show_packages_path(@package.ecosystem, @package.name), class: "btn btn-sm btn-outline-secondary" %>
+            <% end %>
+          </div>
         </div>
         <div class="card-body">
           <% if @issue_packages.any? %>
@@ -81,17 +101,21 @@
                         </span>
                       <% end %>
                       <% if issue_package.update_type %>
-                        <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : 'success' %>">
-                          <%= issue_package.update_type.capitalize %> PR
-                        </span>
+                        <%= link_to show_packages_path(@package.ecosystem, @package.name, type: issue_package.update_type), class: "text-decoration-none" do %>
+                          <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %>">
+                            <%= issue_package.update_type.capitalize %> PR
+                          </span>
+                        <% end %>
                       <% end %>
                     </div>
                     
                     <small class="text-muted">
                       <% effective_state = issue.effective_state %>
-                      <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
-                        <%= effective_state.capitalize %>
-                      </span>
+                      <%= link_to show_packages_path(@package.ecosystem, @package.name, status: effective_state), class: "text-decoration-none" do %>
+                        <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'secondary' %> me-2">
+                          <%= effective_state.capitalize %>
+                        </span>
+                      <% end %>
                       
                       <%= octicon "clock", class: "me-1" %>
                       <%= time_ago_in_words(issue.created_at) %> ago
@@ -259,17 +283,23 @@
             %>
             
             <div class="d-flex justify-content-between mb-2">
-              <span class="badge bg-success">Open</span>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'open'), class: "text-decoration-none" do %>
+                <span class="badge bg-success">Open</span>
+              <% end %>
               <span><%= pluralize open_count, 'PR' %></span>
             </div>
             
             <div class="d-flex justify-content-between mb-2">
-              <span class="badge bg-primary">Merged</span>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'merged'), class: "text-decoration-none" do %>
+                <span class="badge bg-primary">Merged</span>
+              <% end %>
               <span><%= pluralize merged_count, 'PR' %></span>
             </div>
             
             <div class="d-flex justify-content-between mb-2">
-              <span class="badge bg-secondary">Closed</span>
+              <%= link_to show_packages_path(@package.ecosystem, @package.name, status: 'closed'), class: "text-decoration-none" do %>
+                <span class="badge bg-secondary">Closed</span>
+              <% end %>
               <span><%= pluralize closed_count, 'PR' %></span>
             </div>
             
@@ -292,9 +322,11 @@
               <% update_types.each do |type, count| %>
                 <% next if type.nil? %>
                 <div class="d-flex justify-content-between mb-2">
-                  <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : 'success' %>">
-                    <%= type.capitalize %>
-                  </span>
+                  <%= link_to show_packages_path(@package.ecosystem, @package.name, type: type), class: "text-decoration-none" do %>
+                    <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : type == 'removal' ? 'danger' : 'success' %>">
+                      <%= type.capitalize %>
+                    </span>
+                  <% end %>
                   <span><%= pluralize count, 'update' %></span>
                 </div>
               <% end %>

@@ -122,9 +122,16 @@
           <% if @issue.body.present? %>
             <div class="mb-3">
               <strong>Description:</strong>
-              <div class="mt-2 p-3 bg-light rounded">
-                <%= simple_format(@issue.body) %>
-              </div>
+              <% cleaned_body = clean_dependabot_body(@issue.body) %>
+              <% if cleaned_body.present? %>
+                <div class="mt-2 p-3 bg-light rounded">
+                  <%= simple_format(cleaned_body) %>
+                </div>
+              <% else %>
+                <div class="mt-2 p-3 bg-light rounded text-muted">
+                  <em>No additional description provided</em>
+                </div>
+              <% end %>
             </div>
           <% end %>
 
@@ -238,7 +245,7 @@
                   <% if issue_package.update_type %>
                     <div class="col-md-6 mb-2">
                       <strong>Update Type:</strong><br>
-                      <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : 'success' %>">
+                      <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %>">
                         <%= issue_package.update_type.capitalize %>
                       </span>
                     </div>

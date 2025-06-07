@@ -71,6 +71,7 @@ class Repository < ApplicationRecord
     self.owner = json['owner']
     self.status = json['status']
     self.default_branch = json['default_branch']
+    self.last_synced_at = Time.now
     self.save    
   end
 
@@ -146,7 +147,6 @@ class Repository < ApplicationRecord
       end
     end
 
-    self.issues_count = issues.where(pull_request: false).count
     self.pull_requests_count = issues.where(pull_request: true).count
 
     self.avg_time_to_close_issue = issues.where(pull_request: false).average(:time_to_close)

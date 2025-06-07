@@ -48,4 +48,24 @@ module ApplicationHelper
       line_chart chart_data_host_repository_path(@repository.host, @repository, chart: name, period: @period, exclude_bots: @exclude_bots, start_date: @start_date, end_date: @end_date), thousands: ",", title: name.humanize, max: max, ytitle: ytitle
     end
   end
+
+  def clean_dependabot_body(body)
+    return body unless body
+
+    # Common Dependabot footer patterns to remove
+    patterns = [
+      /---\s*\n\s*\*\*Dependabot commands and options\*\*.*/m,
+      /<details>\s*<summary>Dependabot commands and options<\/summary>.*/m,
+      /\*\*Dependabot commands and options\*\*.*/m,
+      /<details>\s*<summary>Changelog<\/summary>.*/m,
+      /<details>\s*<summary>Commits<\/summary>.*/m
+    ]
+
+    cleaned_body = body
+    patterns.each do |pattern|
+      cleaned_body = cleaned_body.gsub(pattern, '').strip
+    end
+
+    cleaned_body
+  end
 end

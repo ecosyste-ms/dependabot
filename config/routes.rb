@@ -1,5 +1,4 @@
 require 'sidekiq/web'
-require 'sidekiq-status/web'
 
 Sidekiq::Web.use Rack::Auth::Basic do |username, password|
   ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(username), ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_USERNAME"])) &
@@ -16,7 +15,6 @@ Rails.application.routes.draw do
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
       get 'repositories/lookup', to: 'repositories#lookup', as: :repositories_lookup
-      resources :jobs
       resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
         resources :repositories, constraints: { id: /.*/ }, only: [:index, :show] do
           resources :issues, constraints: { id: /.*/ }, only: [:index, :show]

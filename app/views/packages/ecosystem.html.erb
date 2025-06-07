@@ -29,41 +29,127 @@
     </div>
   </div>
 
-  <% if @packages.any? %>
-    <div class="row">
-      <% @packages.each do |package| %>
-        <div class="col-md-6 col-lg-4 mb-3">
-          <div class="card h-100">
+  <div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+      <% if @packages.any? %>
+        <% @packages.each do |package| %>
+          <div class="card mb-3">
             <div class="card-body">
-              <h5 class="card-title">
-                <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
-                  <code><%= package.name %></code>
-                <% end %>
-              </h5>
-              <p class="card-text">
-                <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
-                <span class="text-muted">
-                  <%= pluralize package.issues_count, 'update' %>
-                </span>
-              </p>
-              <p class="card-text">
-                <small class="text-muted">
-                  PURL: <code><%= package.purl %></code>
-                </small>
-              </p>
-              <%= link_to "View updates", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h5 class="card-title mb-1">
+                    <%= link_to show_packages_path(package.ecosystem, package.name), class: "text-decoration-none" do %>
+                      <code><%= package.name %></code>
+                    <% end %>
+                  </h5>
+                  <p class="card-text mb-2">
+                    <span class="badge bg-primary me-2"><%= package.ecosystem %></span>
+                    <span class="text-muted">
+                      <%= pluralize package.issues_count, 'update' %>
+                    </span>
+                  </p>
+                  <p class="card-text mb-0">
+                    <small class="text-muted">
+                      PURL: <code><%= package.purl %></code>
+                    </small>
+                  </p>
+                </div>
+                <div class="col-md-4 text-end">
+                  <%= link_to "View PRs", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary" %>
+                </div>
+              </div>
             </div>
           </div>
+        <% end %>
+        
+        <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+      <% else %>
+        <div class="alert alert-info" role="alert">
+          <h4 class="alert-heading">No Packages Found</h4>
+          <p>No packages found in the <%= @ecosystem %> ecosystem.</p>
+          <%= link_to "Browse all ecosystems", packages_path, class: "btn btn-primary" %>
         </div>
       <% end %>
     </div>
-    
-    <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
-  <% else %>
-    <div class="alert alert-info" role="alert">
-      <h4 class="alert-heading">No Packages Found</h4>
-      <p>No packages found in the <%= @ecosystem %> ecosystem.</p>
-      <%= link_to "Browse all ecosystems", packages_path, class: "btn btn-primary" %>
+
+    <!-- Sidebar with Statistics -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <%= octicon "graph", class: "me-2" %>
+            <%= @ecosystem.capitalize %> Statistics
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-12 text-center">
+              <h4 class="text-primary mb-0"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
+              <small class="text-muted">Total Packages</small>
+            </div>
+          </div>
+          
+          <div class="row mb-3">
+            <div class="col-6 text-center">
+              <h4 class="text-info mb-0"><%= number_with_delimiter(@stats[:total_updates]) %></h4>
+              <small class="text-muted">Total PRs</small>
+            </div>
+            <div class="col-6 text-center">
+              <h4 class="text-warning mb-0"><%= number_with_delimiter(@stats[:unique_repositories]) %></h4>
+              <small class="text-muted">Repositories</small>
+            </div>
+          </div>
+          
+          <hr>
+          
+          <h6>Pull Request Types</h6>
+          <% if @stats[:update_types].any? %>
+            <% @stats[:update_types].each do |type, count| %>
+              <% next if type.nil? %>
+              <div class="d-flex justify-content-between mb-2">
+                <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : type == 'removal' ? 'danger' : 'success' %>">
+                  <%= type&.capitalize || 'Other' %>
+                </span>
+                <span><%= number_with_delimiter(count) %></span>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-muted small">No update type data available</p>
+          <% end %>
+          
+          <hr>
+          
+          <h6>Activity</h6>
+          <ul class="list-unstyled small">
+            <li class="mb-2">
+              <strong>Recent (30 days):</strong><br>
+              <%= number_with_delimiter(@stats[:recent_activity]) %> PRs
+            </li>
+            <% if @stats[:avg_updates_per_package] %>
+              <li class="mb-2">
+                <strong>Avg per Package:</strong><br>
+                <%= @stats[:avg_updates_per_package] %>
+              </li>
+            <% end %>
+            <% if @stats[:most_updated_package] %>
+              <li class="mb-2">
+                <strong>Most PRs:</strong><br>
+                <%= link_to show_packages_path(@stats[:most_updated_package].ecosystem, @stats[:most_updated_package].name), class: "text-decoration-none" do %>
+                  <code><%= truncate(@stats[:most_updated_package].name, length: 20) %></code>
+                <% end %>
+                (<%= @stats[:most_updated_package].issues_count %>)
+              </li>
+            <% end %>
+            <% if @stats[:latest_update] %>
+              <li class="mb-2">
+                <strong>Latest Update:</strong><br>
+                <%= time_ago_in_words(@stats[:latest_update].created_at) %> ago
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
     </div>
-  <% end %>
+  </div>
 </div>

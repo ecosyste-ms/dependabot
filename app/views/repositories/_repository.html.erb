@@ -9,15 +9,36 @@
             <%= link_to repository, host_repository_path(repository.host, repository) %>
         </h5>
       
-        <%# todo description %>
-        <p class="card-subtitle mb-2 text-muted"><i><small>
-          Total issues: <%= number_with_delimiter repository.issues_count %><br/>
-          Total pull requests: <%= number_with_delimiter repository.pull_requests_count %><br/>
-          <% if repository.last_synced_at %>
-              Last synced: <%= distance_of_time_in_words_to_now repository.last_synced_at %> ago
+        <% if repository.metadata.present? && repository.metadata['description'] %>
+          <p class="card-text text-muted mb-2">
+            <%= truncate(repository.metadata['description'], length: 120) %>
+          </p>
+        <% end %>
+        
+        <p class="card-subtitle mb-2 text-muted"><small>
+          <%= link_to host_repository_issues_path(repository.host, repository), class: "text-decoration-none" do %>
+            <%= pluralize repository.issues_count, 'Dependabot PR' %>
           <% end %>
           
-        </small></i></p>
+          <% if repository.metadata.present? %>
+            <% if repository.metadata['stargazers_count'] %>
+              <%= octicon "star", class: "ms-3 me-1" %>
+              <%= number_with_delimiter(repository.metadata['stargazers_count']) %>
+            <% end %>
+            <% if repository.metadata['forks_count'] %>
+              <%= octicon "repo-forked", class: "ms-3 me-1" %>
+              <%= number_with_delimiter(repository.metadata['forks_count']) %>
+            <% end %>
+            <% if repository.metadata['language'] %>
+              <%= octicon "code", class: "ms-3 me-1" %>
+              <%= repository.metadata['language'] %>
+            <% end %>
+          <% end %>
+          
+          <% if repository.last_synced_at %>
+            <br/>Last synced: <%= distance_of_time_in_words_to_now repository.last_synced_at %> ago
+          <% end %>
+        </small></p>
       </div>
       <div class="flex-shrink-0">
         <%# todo avatar url %>

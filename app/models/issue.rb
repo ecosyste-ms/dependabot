@@ -4,6 +4,8 @@ class Issue < ApplicationRecord
   has_many :issue_packages, dependent: :destroy
   has_many :packages, through: :issue_packages
 
+  counter_culture :repository, column_name: :issues_count
+
   scope :past_year, -> { where('created_at > ?', 1.year.ago) }
   scope :bot, -> { where('issues.user ILIKE ?', '%[bot]') }
   scope :human, -> { where.not('issues.user ILIKE ?', '%[bot]') }
@@ -100,6 +102,11 @@ class Issue < ApplicationRecord
     # Package managers by ecosystem
     'conda' => 'conda',
     'conda-forge' => 'conda',
+    
+    # Git submodules
+    'submodules' => 'submodules',
+    'submodule' => 'submodules',
+    'git-submodules' => 'submodules',
   }
 
   scope :dependabot, -> { where(user: DEPENDABOT_USERNAMES) }
@@ -119,20 +126,25 @@ class Issue < ApplicationRecord
   def parse_dependabot_metadata
     return unless user.in?(DEPENDABOT_USERNAMES)
     ecosystem = DEPENDABOT_ECOSYSTEMS.keys & labels.map(&:downcase)
+    inferred_ecosystem = DEPENDABOT_ECOSYSTEMS[ecosystem.first]
     
     # Try single package first
     single_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?<package_name>\S+) from (?<old_version>\S+) to (?<new_version>\S+)(?: in (?<path>.+))?$/)
     
     if single_match
+      package_name = single_match[:package_name]
+      repo_url = extract_repo_url_for_package(package_name)
+      
       return {
         prefix: single_match[:prefix],
         packages: [{
-          name: single_match[:package_name],
+          name: package_name,
           old_version: single_match[:old_version],
-          new_version: single_match[:new_version]
+          new_version: single_match[:new_version],
+          repository_url: repo_url
         }],
         path: single_match[:path],
-        ecosystem: infer_ecosystem_from_path(single_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+        ecosystem: infer_ecosystem_from_path(single_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
       }
     end
     
@@ -146,12 +158,24 @@ class Issue < ApplicationRecord
       packages = package_names.map do |name|
         package_data = { name: name }
         
+        # Extract repository URL for this package
+        repo_url = extract_repo_url_for_package(name)
+        package_data[:repository_url] = repo_url if repo_url
+        
         if body.present?
-          # Look for "Updates `package_name` from X.X.X to Y.Y.Y"
-          version_match = body.match(/Updates `#{Regexp.escape(name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
-          if version_match
-            package_data[:old_version] = version_match[:old_version]
-            package_data[:new_version] = version_match[:new_version]
+          # Check if this package is being removed
+          if body.match(/Removes `#{Regexp.escape(name)}`/) || body.match(/Removes \[#{Regexp.escape(name)}\]/)
+            # This is a removal
+            package_data[:old_version] = nil
+            package_data[:new_version] = nil
+            package_data[:is_removal] = true
+          else
+            # Look for "Updates `package_name` from X.X.X to Y.Y.Y"
+            version_match = body.match(/Updates `#{Regexp.escape(name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
+            if version_match
+              package_data[:old_version] = version_match[:old_version]
+              package_data[:new_version] = version_match[:new_version]
+            end
           end
         end
         
@@ -162,7 +186,7 @@ class Issue < ApplicationRecord
         prefix: multi_match[:prefix],
         packages: packages,
         path: multi_match[:path],
-        ecosystem: infer_ecosystem_from_path(multi_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+        ecosystem: infer_ecosystem_from_path(multi_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_urls(packages),
       }
     end
     
@@ -171,6 +195,8 @@ class Issue < ApplicationRecord
     
     if single_no_version_match && body.present?
       package_name = single_no_version_match[:package_name]
+      repo_url = extract_repo_url_for_package(package_name)
+      
       # Look for version information in body
       version_match = body.match(/Updates `#{Regexp.escape(package_name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
       
@@ -180,10 +206,11 @@ class Issue < ApplicationRecord
           packages: [{
             name: package_name,
             old_version: version_match[:old_version],
-            new_version: version_match[:new_version]
+            new_version: version_match[:new_version],
+            repository_url: repo_url
           }],
           path: single_no_version_match[:path],
-          ecosystem: infer_ecosystem_from_path(single_no_version_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(single_no_version_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
         }
       end
     end
@@ -206,7 +233,7 @@ class Issue < ApplicationRecord
           update_count: update_count,
           packages: packages,
           path: path,
-          ecosystem: infer_ecosystem_from_path(path, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(path, inferred_ecosystem) || discover_ecosystem_from_repository_urls(packages),
         }
       else
         # For group updates without parseable package details, return basic info
@@ -216,7 +243,7 @@ class Issue < ApplicationRecord
           update_count: update_count,
           packages: [],
           path: path,
-          ecosystem: infer_ecosystem_from_path(path, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(path, inferred_ecosystem),
         }
       end
     end
@@ -230,28 +257,36 @@ class Issue < ApplicationRecord
                  requirement_from_to_match[:prefix] + requirement_from_to_match[:update_word] :
                  requirement_from_to_match[:update_word]
         
+        package_name = requirement_from_to_match[:package_name]
+        repo_url = extract_repo_url_for_package(package_name)
+        
         return {
           prefix: prefix,
           packages: [{
-            name: requirement_from_to_match[:package_name],
+            name: package_name,
             old_version: requirement_from_to_match[:old_version].strip,
-            new_version: requirement_from_to_match[:new_version].strip
+            new_version: requirement_from_to_match[:new_version].strip,
+            repository_url: repo_url
           }],
           path: requirement_from_to_match[:path],
-          ecosystem: infer_ecosystem_from_path(requirement_from_to_match[:path], DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(requirement_from_to_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
         }
       end
       
       # Format: "Update package requirement to X"
       requirement_to_match = title.match(/^(?<prefix>.*?)(?:Update|update) (?<package_name>\S+) requirement to (?<new_version>\S+)$/i)
       if requirement_to_match
+        package_name = requirement_to_match[:package_name]
+        repo_url = extract_repo_url_for_package(package_name)
+        
         return {
           prefix: requirement_to_match[:prefix],
           packages: [{
-            name: requirement_to_match[:package_name],
-            new_version: requirement_to_match[:new_version]
+            name: package_name,
+            new_version: requirement_to_match[:new_version],
+            repository_url: repo_url
           }],
-          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
         }
       end
     end
@@ -261,14 +296,18 @@ class Issue < ApplicationRecord
     
     if version_range_match
       versions = version_range_match[:versions].split(',').map(&:strip)
+      package_name = version_range_match[:package_name]
+      repo_url = extract_repo_url_for_package(package_name)
+      
       # For now, just use the last version as the new version
       return {
         prefix: version_range_match[:prefix],
         packages: [{
-          name: version_range_match[:package_name],
-          new_version: versions.last
+          name: package_name,
+          new_version: versions.last,
+          repository_url: repo_url
         }],
-        ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+        ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem),
       }
     end
     
@@ -277,6 +316,8 @@ class Issue < ApplicationRecord
     
     if simple_bump_match && body.present?
       package_name = simple_bump_match[:package_name]
+      repo_url = extract_repo_url_for_package(package_name)
+      
       # Look for version information in body
       version_match = body.match(/Updates `#{Regexp.escape(package_name)}` from (?<old_version>\S+) to (?<new_version>\S+)/)
       
@@ -286,18 +327,32 @@ class Issue < ApplicationRecord
           packages: [{
             name: package_name,
             old_version: version_match[:old_version],
-            new_version: version_match[:new_version]
+            new_version: version_match[:new_version],
+            repository_url: repo_url
           }],
-          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
         }
       else
         # Return basic info even without version details
         return {
           prefix: simple_bump_match[:prefix] + "bump",
           packages: [{
-            name: package_name
+            name: package_name,
+            repository_url: repo_url
           }],
-          ecosystem: infer_ecosystem_from_path(nil, DEPENDABOT_ECOSYSTEMS[ecosystem.first]),
+          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
+        }
+      end
+    end
+    
+    # Try to detect package removals from body text
+    if body.present?
+      removal_packages = parse_package_removals(body)
+      if removal_packages.any?
+        return {
+          prefix: "Remove",
+          packages: removal_packages,
+          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_urls(removal_packages),
         }
       end
     end
@@ -327,37 +382,88 @@ class Issue < ApplicationRecord
           package_cell.strip
         end
         
-        packages << {
+        repo_url = extract_repo_url_for_package(package_name)
+        package_data = {
           name: package_name,
           old_version: from_version.strip,
           new_version: to_version.strip
         }
+        package_data[:repository_url] = repo_url if repo_url
+        packages << package_data
       end
     else
       # Look for individual "Updates `package` from X to Y" lines
       body.scan(/Updates `([^`]+)` from ([^\s]+) to ([^\s]+)/) do |package_name, from_version, to_version|
-        packages << {
+        repo_url = extract_repo_url_for_package(package_name)
+        package_data = {
           name: package_name,
           old_version: from_version,
           new_version: to_version
         }
+        package_data[:repository_url] = repo_url if repo_url
+        packages << package_data
       end
       
       # Look for "Performed the following updates:" format
       if packages.empty? && body.include?("Performed the following updates:")
         # Parse "- Updated PackageName from X to Y in /path" lines
         body.scan(/- Updated ([^\s]+) from ([^\s]+) to ([^\s]+)(?: in ([^\n]+))?/) do |package_name, from_version, to_version, path|
-          packages << {
+          repo_url = extract_repo_url_for_package(package_name)
+          package_data = {
             name: package_name,
             old_version: from_version,
             new_version: to_version,
             path: path&.strip
           }
+          package_data[:repository_url] = repo_url if repo_url
+          packages << package_data
         end
       end
     end
     
     packages
+  end
+  
+  def parse_package_removals(body)
+    packages = []
+    
+    # Look for "Removes `package-name`" patterns
+    body.scan(/Removes `([^`]+)`/) do |package_name|
+      repo_url = extract_repo_url_for_package(package_name[0])
+      package_data = {
+        name: package_name[0],
+        old_version: nil, # We don't usually get version info for removals
+        new_version: nil
+      }
+      package_data[:repository_url] = repo_url if repo_url
+      packages << package_data
+    end
+    
+    # Look for "Removes [package-name]" patterns
+    body.scan(/Removes \[([^\]]+)\]/) do |package_name|
+      repo_url = extract_repo_url_for_package(package_name[0])
+      package_data = {
+        name: package_name[0],
+        old_version: nil,
+        new_version: nil
+      }
+      package_data[:repository_url] = repo_url if repo_url
+      packages << package_data
+    end
+    
+    # Look for "- Removes package-name" patterns in lists
+    body.scan(/^[\s]*[-*]\s+Removes\s+([^\s\n]+)/i) do |package_name|
+      repo_url = extract_repo_url_for_package(package_name[0])
+      package_data = {
+        name: package_name[0],
+        old_version: nil,
+        new_version: nil
+      }
+      package_data[:repository_url] = repo_url if repo_url
+      packages << package_data
+    end
+    
+    packages.uniq { |p| p[:name] }
   end
 
   def update_dependabot_metadata
@@ -411,11 +517,17 @@ class Issue < ApplicationRecord
       issue_package = issue_packages.find_or_initialize_by(package: package)
       
       # Update the version information
+      update_type = if package_data[:is_removal]
+        'removal'
+      else
+        determine_update_type(package_data[:old_version], package_data[:new_version])
+      end
+      
       issue_package.assign_attributes(
         old_version: package_data[:old_version],
         new_version: package_data[:new_version],
         path: metadata[:path],
-        update_type: determine_update_type(package_data[:old_version], package_data[:new_version]),
+        update_type: update_type,
         pr_created_at: created_at
       )
       
@@ -424,6 +536,9 @@ class Issue < ApplicationRecord
   end
   
   def determine_update_type(old_version, new_version)
+    # Check for removals (no new version)
+    return 'removal' if old_version.present? && new_version.blank?
+    
     return nil unless old_version && new_version
     
     # Simple semantic version detection
@@ -442,6 +557,89 @@ class Issue < ApplicationRecord
       nil
     end
   rescue
+    nil
+  end
+  
+  def extract_repo_url_for_package(package_name)
+    return nil unless body.present?
+    
+    # Look for markdown links: [package-name](repo-url)
+    escaped_name = Regexp.escape(package_name)
+    pattern = Regexp.new("\\[#{escaped_name}\\]\\(([^)]+)\\)")
+    match = body.match(pattern)
+    
+    if match && match[1].include?('github.com')
+      return clean_github_url(match[1])
+    end
+    
+    # Also try without escaping for simple package names
+    simple_pattern = Regexp.new("\\[#{Regexp.escape(package_name)}\\]\\(([^)]+)\\)")
+    match = body.match(simple_pattern)
+    if match && match[1].include?('github.com')
+      return clean_github_url(match[1])
+    end
+    
+    nil
+  end
+  
+  def clean_github_url(url)
+    # Remove tree/HEAD paths, blob paths, and other GitHub-specific paths
+    # Convert https://github.com/owner/repo/tree/HEAD/path to https://github.com/owner/repo
+    cleaned = url.gsub(%r{/(tree|blob|commits?)/[^/]+(/.*)?$}, '')
+    
+    # Also remove trailing paths like /types/node
+    # Match pattern: https://github.com/owner/repo and stop there
+    match = cleaned.match(%r{^(https://github\.com/[^/]+/[^/?#]+)})
+    match ? match[1] : cleaned
+  end
+  
+  def discover_ecosystem_from_repository_url(repository_url)
+    return nil unless repository_url
+    
+    # First, look for existing packages in our database with this repository URL (case insensitive)
+    existing_package = Package.where("LOWER(repository_url) = LOWER(?)", repository_url).first
+    return existing_package.ecosystem if existing_package
+    
+    # If not found locally, try packages.ecosyste.ms API
+    fetch_ecosystem_from_packages_api(repository_url)
+  end
+  
+  def discover_ecosystem_from_repository_urls(packages)
+    return nil unless packages.present?
+    
+    packages.each do |package_data|
+      repository_url = package_data[:repository_url]
+      next unless repository_url
+      
+      ecosystem = discover_ecosystem_from_repository_url(repository_url)
+      return ecosystem if ecosystem
+    end
+    
+    nil
+  end
+  
+  def fetch_ecosystem_from_packages_api(repository_url)
+    require 'net/http'
+    require 'json'
+    
+    begin
+      # URL encode the repository URL parameter
+      encoded_url = CGI.escape(repository_url)
+      uri = URI("https://packages.ecosyste.ms/api/v1/packages/lookup?repository_url=#{encoded_url}")
+      response = Net::HTTP.get_response(uri)
+      
+      if response.code == '200'
+        data = JSON.parse(response.body)
+        
+        # The API returns an array of packages, get the first one
+        first_package = data.first
+        return first_package['ecosystem'] if first_package && first_package['ecosystem']
+      end
+    rescue => e
+      Rails.logger.warn "Failed to fetch ecosystem from packages API for #{repository_url}: #{e.message}"
+      nil
+    end
+    
     nil
   end
 end

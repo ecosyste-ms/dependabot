@@ -30,10 +30,7 @@
                         <%= effective_state.capitalize %>
                       </span>
                       
-                      <%= octicon "person", class: "me-1" %>
-                      <%= issue.user %>
-                      
-                      <%= octicon "clock", class: "ms-3 me-1" %>
+                      <%= octicon "clock", class: "me-1" %>
                       <%= time_ago_in_words(issue.created_at) %> ago
                       
                       <% if issue.comments_count > 0 %>

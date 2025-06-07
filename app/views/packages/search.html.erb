@@ -11,7 +11,7 @@
   </nav>
 
   <div class="row mb-4">
-    <div class="col-lg-8">
+    <div class="col-lg-6">
       <h1 class="mb-3">
         <%= octicon "search", class: "me-2" %>
         Search Packages
@@ -19,6 +19,9 @@
       <% if @query.present? %>
         <p class="text-muted">
           Results for "<strong><%= @query %></strong>"
+          <% if @ecosystem.present? %>
+            in <strong><%= @ecosystem.capitalize %></strong> ecosystem
+          <% end %>
         </p>
       <% else %>
         <p class="text-muted">
@@ -26,10 +29,22 @@
         </p>
       <% end %>
     </div>
-    <div class="col-lg-4">
-      <%= form_with url: search_packages_path, method: :get, local: true, class: "d-flex" do |form| %>
-        <%= form.text_field :q, placeholder: "Search packages...", class: "form-control me-2", value: @query %>
-        <%= form.submit "Search", class: "btn btn-primary" %>
+    <div class="col-lg-6">
+      <%= form_with url: search_packages_path, method: :get, local: true do |form| %>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <%= form.text_field :q, placeholder: "Search packages...", class: "form-control", value: @query %>
+          </div>
+          <div class="col-md-4">
+            <%= form.select :ecosystem, 
+                options_for_select([['All ecosystems', '']] + @ecosystems.map { |e| [e.capitalize, e] }, @ecosystem),
+                {}, 
+                { class: "form-select" } %>
+          </div>
+          <div class="col-md-2">
+            <%= form.submit "Search", class: "btn btn-primary w-100" %>
+          </div>
+        </div>
       <% end %>
     </div>
   </div>
@@ -57,7 +72,7 @@
                     PURL: <code><%= package.purl %></code>
                   </small>
                 </p>
-                <%= link_to "View updates", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
+                <%= link_to "View PRs", show_packages_path(package.ecosystem, package.name), class: "btn btn-outline-primary btn-sm" %>
               </div>
             </div>
           </div>
