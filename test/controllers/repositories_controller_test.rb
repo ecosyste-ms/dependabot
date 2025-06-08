@@ -69,7 +69,7 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 'application/atom+xml', response.content_type.split(';').first
     assert_match repository.full_name, response.body
-    assert_match 'Dependabot Issues', response.body
+    assert_match 'Dependabot Pull Requests', response.body
     assert_match issue.title, response.body
   end
 

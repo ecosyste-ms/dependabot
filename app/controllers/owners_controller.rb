@@ -30,4 +30,34 @@ class OwnersController < ApplicationController
 
     expires_in 1.day, public: true
   end
+
+  def issues
+    @host = Host.find_by!(name: params[:host_id])
+    @owner = params[:id]
+    
+    # Get all issues for repositories owned by this owner
+    scope = @host.issues.joins(:repository)
+                       .where(repositories: { owner: @owner })
+                       .includes(:repository, :host, issue_packages: :package)
+                       .order('issues.created_at DESC')
+    
+    @pagy, @issues = pagy(scope)
+    
+    expires_in 1.hour, public: true
+  end
+
+  def feed
+    @host = Host.find_by!(name: params[:host_id])
+    @owner = params[:id]
+    
+    # Get recent issues for repositories owned by this owner
+    @issues = @host.issues.joins(:repository)
+                          .where(repositories: { owner: @owner })
+                          .includes(:repository, :host, issue_packages: :package)
+                          .order('issues.created_at DESC')
+                          .limit(50)
+    
+    expires_in 1.hour, public: true
+    render formats: [:atom]
+  end
 end

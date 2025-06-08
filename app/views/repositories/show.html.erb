@@ -2,7 +2,7 @@
 <% @meta_description = "Dependabot pull requests for #{@repository.full_name} on #{@host}" %>
 
 <% content_for :head do %>
-  <%= auto_discovery_link_tag(:atom, feed_host_repository_url(@host, @repository), title: "#{@repository.full_name} - Dependabot Issues") %>
+  <%= auto_discovery_link_tag(:atom, feed_host_repository_url(@host, @repository), title: "#{@repository.full_name} - Dependabot Pull Requests") %>
 <% end %>
 
 <div class="container-sm">

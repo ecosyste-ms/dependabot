@@ -1,5 +1,5 @@
 class PackagesController < ApplicationController
-  before_action :set_package, only: [:show]
+  before_action :set_package, only: [:show, :feed]
 
   def index
     @ecosystem_counts = Package.group(:ecosystem).count

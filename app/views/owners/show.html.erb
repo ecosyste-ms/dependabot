@@ -2,10 +2,22 @@
 <% @meta_description = "Dependabot PR stats for #{@owner} on #{@host}" %>
 
 <div class="container-sm">
-  <h1 class='mb-4'>
-    <%= link_to @host, host_path(@host) %> /
-    <%= link_to @owner, "#{@host.url}/#{@owner}", target: :_blank %>
-  </h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class='mb-0'>
+      <%= link_to @host, host_path(@host) %> /
+      <%= link_to @owner, "#{@host.url}/#{@owner}", target: :_blank %>
+    </h1>
+    <div class="d-flex gap-2">
+      <%= link_to feed_host_owner_path(@host, @owner), class: "btn btn-outline-secondary btn-sm" do %>
+        <%= octicon "rss", height: 16, class: "me-1" %>
+        RSS Feed
+      <% end %>
+      <%= link_to issues_host_owner_path(@host, @owner), class: "btn btn-primary btn-sm" do %>
+        <%= octicon "git-pull-request", height: 16, class: "me-1" %>
+        View All PRs
+      <% end %>
+    </div>
+  </div>
 
   <div class="row">
     <div class="col-md-8">

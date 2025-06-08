@@ -61,7 +61,12 @@ Rails.application.routes.draw do
       end
     end
     resources :authors, constraints: { id: /.*/ }, only: [:index, :show]
-    resources :owners, constraints: { id: /.*/ }, only: [:index, :show]
+    resources :owners, constraints: { id: /.*/ }, only: [:index, :show] do
+      member do
+        get 'issues', to: 'owners#issues'
+        get 'feed', to: 'owners#feed'
+      end
+    end
   end
 
   get '/chart_data', to: 'home#chart_data', as: :chart_data
