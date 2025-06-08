@@ -41,7 +41,7 @@ class RepositoriesController < ApplicationController
     raise ActiveRecord::RecordNotFound unless @repository
     
     # Get issues for the feed with optional label filtering
-    scope = @repository.issues.includes(:host)
+    scope = @repository.issues.includes(:host, issue_packages: :package)
     
     if params[:label].present?
       scope = scope.with_label(params[:label])

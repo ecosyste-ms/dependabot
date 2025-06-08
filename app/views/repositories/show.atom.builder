@@ -12,16 +12,20 @@ atom_feed(language: 'en-US') do |feed|
         content << content_tag(:p, "Created: #{issue.created_at.strftime('%B %d, %Y')}")
         content << content_tag(:p, "Author: #{issue.user}")
         
-        if issue.dependency_name.present?
-          content << content_tag(:p, "Package: #{issue.dependency_name}")
-        end
-        
-        if issue.dependency_previous_version.present? && issue.dependency_new_version.present?
-          content << content_tag(:p, "Version: #{issue.dependency_previous_version} → #{issue.dependency_new_version}")
-        end
-        
-        if issue.ecosystem.present?
-          content << content_tag(:p, "Ecosystem: #{issue.ecosystem}")
+        # Show package information from issue_packages
+        issue.issue_packages.each do |issue_package|
+          package = issue_package.package
+          content << content_tag(:p, "Package: #{package.ecosystem}/#{package.name}")
+          
+          if issue_package.version_change.present?
+            content << content_tag(:p, "Version: #{issue_package.version_change}")
+          elsif issue_package.old_version.present? && issue_package.new_version.present?
+            content << content_tag(:p, "Version: #{issue_package.old_version} → #{issue_package.new_version}")
+          end
+          
+          if issue_package.update_type.present?
+            content << content_tag(:p, "Update Type: #{issue_package.update_type.humanize}")
+          end
         end
         
         if issue.merged_at.present?
