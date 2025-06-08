@@ -29,3 +29,7 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+CLAUDE.md
+.claude/settings.local.json
+*.dump
