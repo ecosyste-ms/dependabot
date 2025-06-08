@@ -1,12 +1,22 @@
 <% @meta_title = "#{@repository.full_name} Dependabot PRs | #{@host}" %>
 <% @meta_description = "Dependabot pull requests for #{@repository.full_name} on #{@host}" %>
 
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:atom, feed_host_repository_url(@host, @repository), title: "#{@repository.full_name} - Dependabot Issues") %>
+<% end %>
+
 <div class="container-sm">
-  <h1 class='mb-4'>
-    <%= link_to @host, host_path(@host) %> /
-    <%= link_to @repository.owner, host_owner_path(@host, @repository.owner) %> /
-    <%= link_to @repository.project_name, @repository.html_url, target: :_blank %>
-  </h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class='mb-0'>
+      <%= link_to @host, host_path(@host) %> /
+      <%= link_to @repository.owner, host_owner_path(@host, @repository.owner) %> /
+      <%= link_to @repository.project_name, @repository.html_url, target: :_blank %>
+    </h1>
+    <%= link_to feed_host_repository_url(@host, @repository), class: "btn btn-outline-secondary btn-sm" do %>
+      <%= octicon "rss", height: 16, class: "me-1" %>
+      RSS Feed
+    <% end %>
+  </div>
 
   <div class="row">
     <div class="col-md-8">

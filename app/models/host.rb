@@ -44,34 +44,6 @@ class Host < ApplicationRecord
     name.downcase != kind
   end
 
-  def sync_repository_async(full_name, remote_ip = '0.0.0.0')
-    repo = self.repositories.find_by('lower(full_name) = ?', full_name.downcase)
-    repo = self.repositories.create(full_name: full_name) if repo.nil?
-    
-    job = Job.new(url: repo.html_url, status: 'pending', ip: remote_ip)
-    if job.save
-      job.sync_issues_async
-    end
-    job
-  end
-
-  def sync_recently_updated_repositories_async
-    conn = Faraday.new('https://repos.ecosyste.ms') do |f|
-      f.request :json
-      f.request :retry
-      f.response :json
-    end
-    
-    response = conn.get('/api/v1/hosts/' + name + '/repositories')
-    return nil unless response.success?
-    json = response.body
-
-    json.each do |repo|
-      puts "syncing #{repo['full_name']}"
-      sync_repository_async(repo['full_name'])
-    end
-  end 
-
   def self.update_counts
     Host.all.each(&:update_counts)
   end

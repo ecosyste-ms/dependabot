@@ -132,6 +132,34 @@ class PackagesController < ApplicationController
     @pagy, @issue_packages = pagy(issue_packages)
   end
 
+  def feed
+    issue_packages = @package.issue_packages
+                            .includes(issue: [:repository, :host])
+                            .order('issues.created_at DESC')
+    
+    # Filter by status if provided
+    if params[:status].present?
+      case params[:status]
+      when 'open'
+        issue_packages = issue_packages.joins(:issue).where(issues: { state: 'open' })
+      when 'merged'
+        issue_packages = issue_packages.joins(:issue).where.not(issues: { merged_at: nil })
+      when 'closed'
+        issue_packages = issue_packages.joins(:issue).where(issues: { state: 'closed', merged_at: nil })
+      end
+    end
+    
+    # Filter by update type if provided
+    if params[:type].present?
+      issue_packages = issue_packages.where(update_type: params[:type])
+    end
+    
+    @issue_packages = issue_packages.limit(50)
+    
+    expires_in 1.hour, public: true
+    render 'show', formats: [:atom]
+  end
+
   def search
     @query = params[:q]
     @ecosystem = params[:ecosystem]

@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:atom, feed_packages_url(@package.ecosystem, @package.name), title: "#{@package.ecosystem}/#{@package.name} - Dependabot Updates") %>
+<% end %>
+
 <div class="container-sm">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -78,9 +82,15 @@
                 </small>
               <% end %>
             </h5>
-            <% if params[:status].present? || params[:type].present? %>
-              <%= link_to "Clear filter", show_packages_path(@package.ecosystem, @package.name), class: "btn btn-sm btn-outline-secondary" %>
-            <% end %>
+            <div class="d-flex gap-2">
+              <%= link_to feed_packages_url(@package.ecosystem, @package.name), class: "btn btn-outline-secondary btn-sm" do %>
+                <%= octicon "rss", height: 16, class: "me-1" %>
+                RSS Feed
+              <% end %>
+              <% if params[:status].present? || params[:type].present? %>
+                <%= link_to "Clear filter", show_packages_path(@package.ecosystem, @package.name), class: "btn btn-sm btn-outline-secondary" %>
+              <% end %>
+            </div>
           </div>
         </div>
         <div class="card-body">

@@ -56,18 +56,23 @@ Rails.application.routes.draw do
       #   get 'chart_data', to: 'repositories#chart_data'
       # end
       resources :issues, constraints: { id: /.*/ }, only: [:show]
+      member do
+        get 'feed', to: 'repositories#feed'
+      end
     end
     resources :authors, constraints: { id: /.*/ }, only: [:index, :show]
     resources :owners, constraints: { id: /.*/ }, only: [:index, :show]
   end
 
   get '/chart_data', to: 'home#chart_data', as: :chart_data
+  get '/feed', to: 'home#feed', as: :global_feed
 
   resources :packages, only: [:index] do
     collection do
       get 'search'
       get ':ecosystem/chart_data', to: 'packages#ecosystem_chart_data', as: :ecosystem_chart_data, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
+      get ':ecosystem/:name/feed', to: 'packages#feed', as: :feed, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
       get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
     end
   end

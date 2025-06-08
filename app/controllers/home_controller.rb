@@ -36,4 +36,14 @@ class HomeController < ApplicationController
     expires_in 1.hour, public: true
     render json: result
   end
+
+  def feed
+    # Get recent issues across all repositories
+    @issues = Issue.includes(:repository, :host, issue_packages: :package)
+                  .order(created_at: :desc)
+                  .limit(100)
+    
+    expires_in 1.hour, public: true
+    render formats: [:atom]
+  end
 end

@@ -10,11 +10,6 @@ class RepositoriesController < ApplicationController
     if @repository
       @repository.sync_async(request.remote_ip) unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
       redirect_to host_repository_path(@host, @repository)
-    elsif path.present?
-      @job = @host.sync_repository_async(path, request.remote_ip)
-      @repository = @host.repositories.find_by('lower(full_name) = ?', path.downcase)
-      raise ActiveRecord::RecordNotFound unless @repository
-      redirect_to host_repository_path(@host, @repository)
     else
       raise ActiveRecord::RecordNotFound
     end
@@ -29,11 +24,6 @@ class RepositoriesController < ApplicationController
     @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
     fresh_when(@repository, public: true)
-    if @repository.nil?
-      @job = @host.sync_repository_async(params[:id], request.remote_ip)
-      @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
-      raise ActiveRecord::RecordNotFound unless @repository
-    end
     
     # Get issues for the main content area with optional label filtering
     scope = @repository.issues.includes(:host)
@@ -43,6 +33,24 @@ class RepositoriesController < ApplicationController
     end
     
     @pagy, @issues = pagy(scope.order('created_at DESC'))
+  end
+
+  def feed
+    @host = Host.find_by_name!(params[:host_id])
+    @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
+    raise ActiveRecord::RecordNotFound unless @repository
+    
+    # Get issues for the feed with optional label filtering
+    scope = @repository.issues.includes(:host)
+    
+    if params[:label].present?
+      scope = scope.with_label(params[:label])
+    end
+    
+    @issues = scope.limit(50).order('created_at DESC')
+    
+    expires_in 1.hour, public: true
+    render 'show', formats: [:atom]
   end
 
   def charts

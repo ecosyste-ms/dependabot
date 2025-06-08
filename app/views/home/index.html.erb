@@ -1,7 +1,13 @@
 <div class="container-sm">
-  <h1 class='mb-4'>
-    Recent Dependabot Pull Requests
-  </h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class='mb-0'>
+      Recent Dependabot Pull Requests
+    </h1>
+    <%= link_to global_feed_url, class: "btn btn-outline-secondary btn-sm" do %>
+      <%= octicon "rss", height: 16, class: "me-1" %>
+      RSS Feed
+    <% end %>
+  </div>
   
   <!-- Stats Cards -->
   <div class="row mb-4">
