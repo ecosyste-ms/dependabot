@@ -12,8 +12,10 @@ class Repository < ApplicationRecord
   scope :created_after, ->(date) { where('created_at > ?', date) }
   scope :updated_after, ->(date) { where('updated_at > ?', date) }
   scope :owner, ->(owner) { where(owner: owner) }
-  scope :fork, -> { where("metadata->>'fork' = 'true'") }
-  scope :archived, -> { where("metadata->>'archived' = 'true'") }
+  scope :fork, -> { where(fork: true) }
+  scope :not_fork, -> { where(fork: false) }
+  scope :archived, -> { where(archived: true) }
+  scope :not_archived, -> { where(archived: false) }
   scope :without_metadata, -> { where("LENGTH(metadata::text) = 2") }
 
   def self.sync_least_recently_synced
@@ -80,6 +82,8 @@ class Repository < ApplicationRecord
     self.owner = json['owner']
     self.status = json['status']
     self.default_branch = json['default_branch']
+    self.fork = json['fork'] == true
+    self.archived = json['archived'] == true
     self.last_synced_at = Time.now
     self.save    
   end

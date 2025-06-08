@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_07_184819) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_08_073611) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
 
   create_table "exports", force: :cascade do |t|
@@ -65,7 +66,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_07_184819) do
     t.datetime "updated_at", null: false
     t.datetime "pr_created_at"
     t.index ["issue_id", "package_id"], name: "index_issue_packages_on_issue_id_and_package_id", unique: true
-    t.index ["issue_id"], name: "index_issue_packages_on_issue_id"
     t.index ["package_id"], name: "index_issue_packages_on_package_id"
     t.index ["pr_created_at"], name: "index_issue_packages_on_pr_created_at"
   end
@@ -174,7 +174,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_07_184819) do
     t.integer "past_year_merged_pull_requests_count"
     t.string "owner"
     t.json "metadata", default: {}
+    t.boolean "fork", default: false, null: false
+    t.boolean "archived", default: false, null: false
     t.index "host_id, lower((full_name)::text)", name: "index_repositories_on_host_id_lower_full_name", unique: true
+    t.index ["archived"], name: "index_repositories_on_archived"
+    t.index ["fork"], name: "index_repositories_on_fork"
     t.index ["owner"], name: "index_repositories_on_owner"
   end
 
