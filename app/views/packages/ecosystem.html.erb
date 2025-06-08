@@ -141,20 +141,8 @@
                       <span class="badge bg-light text-dark small"><%= package.ecosystem %></span>
                     </div>
                     <div class="text-muted small">
-                      <%= pluralize package.issues_count, 'update' %> • PURL: <code class="text-muted"><%= package.purl %></code>
+                      <%= pluralize number_with_delimiter(package.issues_count), 'update' %> • <%= pluralize number_with_delimiter(package.unique_repositories_count), 'repo' %> • PURL: <code class="text-muted"><%= package.purl %></code>
                     </div>
-                  </div>
-                  
-                  <div class="text-end flex-shrink-0">
-                    <div class="fw-semibold text-primary fs-5"><%= number_with_delimiter(package.issues_count) %></div>
-                    <div class="text-muted small">updates</div>
-                  </div>
-                  
-                  <div class="ms-3 flex-shrink-0">
-                    <span class="btn btn-outline-primary btn-sm">
-                      View PRs
-                      <%= octicon "arrow-right", class: "ms-1" %>
-                    </span>
                   </div>
                 </div>
               </div>

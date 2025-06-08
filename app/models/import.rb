@@ -22,7 +22,7 @@ class Import < ApplicationRecord
   
   def self.already_imported?(datetime)
     filename = "#{datetime.year}-#{datetime.month.to_s.rjust(2, '0')}-#{datetime.day.to_s.rjust(2, '0')}-#{datetime.hour}.json.gz"
-    exists?(filename: filename, success: true)
+    exists?(filename: filename)
   end
   
   def self.import_hour(datetime)

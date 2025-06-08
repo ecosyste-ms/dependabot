@@ -4,6 +4,9 @@ class IssuePackage < ApplicationRecord
   
   validates :issue_id, uniqueness: { scope: :package_id }
   
+  after_create :update_package_unique_repositories_counts
+  after_destroy :update_package_unique_repositories_counts
+  
   # Update types including removals
   UPDATE_TYPES = %w[major minor patch removal].freeze
   
@@ -30,5 +33,11 @@ class IssuePackage < ApplicationRecord
     else
       nil
     end
+  end
+  
+  private
+  
+  def update_package_unique_repositories_counts
+    package.update_unique_repositories_counts!
   end
 end

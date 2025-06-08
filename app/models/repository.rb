@@ -14,9 +14,10 @@ class Repository < ApplicationRecord
   scope :owner, ->(owner) { where(owner: owner) }
   scope :fork, -> { where("metadata->>'fork' = 'true'") }
   scope :archived, -> { where("metadata->>'archived' = 'true'") }
+  scope :without_metadata, -> { where("LENGTH(metadata::text) = 2") }
 
   def self.sync_least_recently_synced
-    Repository.active.order('last_synced_at ASC').limit(3000).each(&:sync_async)
+    Repository.active.order('last_synced_at ASC').limit(3000).each(&:sync_repository_async)
   end
   
   def self.enqueue_stale_for_sync(limit: 1000)
@@ -57,15 +58,6 @@ class Repository < ApplicationRecord
 
   def owner
     read_attribute(:owner) || full_name.split('/').first
-  end
-
-  def sync_async(remote_ip = '0.0.0.0')
-    return if last_synced_at && last_synced_at > 1.day.ago
-
-    job = Job.new(url: html_url, status: 'pending', ip: remote_ip)
-    if job.save
-      job.sync_issues_async
-    end
   end
 
   def sync_details

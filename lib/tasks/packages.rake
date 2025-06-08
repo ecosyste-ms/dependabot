@@ -60,4 +60,28 @@ namespace :packages do
     count = Package.enqueue_stale_for_sync
     puts "Enqueued #{count} packages for sync"
   end
+  
+  desc "Update unique repositories counts for all packages"
+  task update_unique_repositories_counts: :environment do
+    puts "Updating unique repositories counts for all packages..."
+    
+    total_count = Package.count
+    processed_count = 0
+    
+    puts "Found #{total_count} packages to process..."
+    
+    Package.find_each.with_index do |package, index|
+      package.update_unique_repositories_counts!
+      processed_count += 1
+      
+      if (index + 1) % 100 == 0
+        puts "\nProcessed #{index + 1}/#{total_count} packages..."
+      else
+        print "."
+      end
+    end
+    
+    puts "\nUnique repositories counts update complete!"
+    puts "Total packages processed: #{processed_count}"
+  end
 end

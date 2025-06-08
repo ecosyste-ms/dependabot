@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_07_100508) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_07_184819) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -129,9 +129,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_07_100508) do
     t.integer "issues_count", default: 0, null: false
     t.string "repository_url"
     t.json "metadata", default: {}
+    t.integer "unique_repositories_count", default: 0
+    t.integer "unique_repositories_count_past_30_days", default: 0
     t.index "lower((repository_url)::text)", name: "index_packages_on_lower_repository_url"
     t.index ["issues_count"], name: "index_packages_on_issues_count"
     t.index ["name", "ecosystem"], name: "index_packages_on_name_and_ecosystem", unique: true
+    t.index ["unique_repositories_count"], name: "index_packages_on_unique_repositories_count"
+    t.index ["unique_repositories_count_past_30_days"], name: "index_packages_on_unique_repositories_count_past_30_days"
   end
 
   create_table "repositories", force: :cascade do |t|

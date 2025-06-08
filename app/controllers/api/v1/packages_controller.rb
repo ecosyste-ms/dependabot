@@ -30,7 +30,7 @@ class Api::V1::PackagesController < Api::V1::ApplicationController
   end
   
   def show
-    @package = Package.includes(:issues, :issue_packages).find_by!(
+    @package = Package.find_by!(
       ecosystem: params[:ecosystem], 
       name: params[:name]
     )

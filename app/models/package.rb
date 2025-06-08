@@ -138,4 +138,38 @@ class Package < ApplicationRecord
   def sync
     fetch_metadata_from_ecosyste_ms
   end
+  
+  def unique_repositories_count
+    # Use cached value if available, otherwise calculate
+    if has_attribute?(:unique_repositories_count) && read_attribute(:unique_repositories_count)
+      read_attribute(:unique_repositories_count)
+    else
+      issues.joins(:repository).distinct.count('repositories.id')
+    end
+  end
+  
+  def unique_repositories_count_past_30_days
+    # Use cached value if available, otherwise calculate
+    if has_attribute?(:unique_repositories_count_past_30_days) && read_attribute(:unique_repositories_count_past_30_days)
+      read_attribute(:unique_repositories_count_past_30_days)
+    else
+      issues.joins(:repository, :issue_packages)
+            .where(issue_packages: { pr_created_at: 30.days.ago.. })
+            .distinct
+            .count('repositories.id')
+    end
+  end
+  
+  def update_unique_repositories_counts!
+    total_count = issues.joins(:repository).distinct.count('repositories.id')
+    past_30_days_count = issues.joins(:repository, :issue_packages)
+                               .where(issue_packages: { pr_created_at: 30.days.ago.. })
+                               .distinct
+                               .count('repositories.id')
+    
+    update_columns(
+      unique_repositories_count: total_count,
+      unique_repositories_count_past_30_days: past_30_days_count
+    )
+  end
 end
