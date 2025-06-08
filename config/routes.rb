@@ -61,7 +61,6 @@ Rails.application.routes.draw do
     resources :owners, constraints: { id: /.*/ }, only: [:index, :show]
   end
 
-  get '/dependabot', to: 'issues#dependabot', as: :dependabot
   get '/chart_data', to: 'home#chart_data', as: :chart_data
 
   resources :packages, only: [:index] do
