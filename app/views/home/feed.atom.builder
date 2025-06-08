@@ -2,6 +2,12 @@ atom_feed(language: 'en-US') do |feed|
   feed.title "Dependabot Updates"
   feed.description "Latest Dependabot pull requests and updates across all repositories"
   feed.link root_url
+  
+  # Add self link
+  feed.link rel: 'self', href: global_feed_url
+  
+  # Add alternate link to HTML version
+  feed.link rel: 'alternate', type: 'text/html', href: root_url
   feed.updated @issues.maximum(:updated_at) if @issues.any?
   
   @issues.each do |issue|

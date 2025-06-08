@@ -50,12 +50,13 @@ class OwnersController < ApplicationController
     @host = Host.find_by!(name: params[:host_id])
     @owner = params[:id]
     
-    # Get recent issues for repositories owned by this owner
-    @issues = @host.issues.joins(:repository)
-                          .where(repositories: { owner: @owner })
-                          .includes(:repository, :host, issue_packages: :package)
-                          .order('issues.created_at DESC')
-                          .limit(50)
+    # Get recent issues for repositories owned by this owner with pagination
+    scope = @host.issues.joins(:repository)
+                        .where(repositories: { owner: @owner })
+                        .includes(:repository, :host, issue_packages: :package)
+                        .order('issues.created_at DESC')
+    
+    @pagy, @issues = pagy_countless(scope, limit: 50)
     
     expires_in 1.hour, public: true
     render formats: [:atom]

@@ -154,7 +154,7 @@ class PackagesController < ApplicationController
       issue_packages = issue_packages.where(update_type: params[:type])
     end
     
-    @issue_packages = issue_packages.limit(50)
+    @pagy, @issue_packages = pagy_countless(issue_packages, limit: 50)
     
     expires_in 1.hour, public: true
     render 'show', formats: [:atom]
@@ -177,12 +177,13 @@ class PackagesController < ApplicationController
   def ecosystem_feed
     @ecosystem = params[:ecosystem]
     
-    # Get recent issues for packages in this ecosystem
-    @issues = Issue.joins(issue_packages: :package)
-                   .where(packages: { ecosystem: @ecosystem })
-                   .includes(:repository, :host, issue_packages: :package)
-                   .order('issues.created_at DESC')
-                   .limit(50)
+    # Get recent issues for packages in this ecosystem with pagination
+    scope = Issue.joins(issue_packages: :package)
+                 .where(packages: { ecosystem: @ecosystem })
+                 .includes(:repository, :host, issue_packages: :package)
+                 .order('issues.created_at DESC')
+    
+    @pagy, @issues = pagy_countless(scope, limit: 50)
     
     expires_in 1.hour, public: true
     render formats: [:atom]

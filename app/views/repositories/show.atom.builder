@@ -2,6 +2,21 @@ atom_feed(language: 'en-US') do |feed|
   feed.title "#{@repository.full_name} - Dependabot Pull Requests"
   feed.description "Recent Dependabot pull requests for #{@repository.full_name}"
   feed.link host_repository_url(@host, @repository)
+  
+  # Add self link
+  feed.link rel: 'self', href: feed_host_repository_url(@host, @repository, page: @pagy.page)
+  
+  # Add alternate link to HTML version
+  feed.link rel: 'alternate', type: 'text/html', href: host_repository_url(@host, @repository)
+  
+  # Add pagination links
+  if @pagy.prev
+    feed.link rel: 'previous', href: feed_host_repository_url(@host, @repository, page: @pagy.prev)
+  end
+  
+  if @pagy.next
+    feed.link rel: 'next', href: feed_host_repository_url(@host, @repository, page: @pagy.next)
+  end
   feed.updated @issues.maximum(:updated_at) if @issues.any?
   
   @issues.each do |issue|

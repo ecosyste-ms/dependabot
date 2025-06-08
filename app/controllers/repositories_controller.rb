@@ -47,7 +47,7 @@ class RepositoriesController < ApplicationController
       scope = scope.with_label(params[:label])
     end
     
-    @issues = scope.limit(50).order('issues.created_at DESC')
+    @pagy, @issues = pagy_countless(scope.order('issues.created_at DESC'), limit: 50)
     
     expires_in 1.hour, public: true
     render 'show', formats: [:atom]

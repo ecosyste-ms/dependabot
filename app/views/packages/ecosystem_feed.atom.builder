@@ -3,6 +3,21 @@ atom_feed(language: 'en-US') do |feed|
   feed.description "Recent Dependabot pull requests for packages in the #{@ecosystem} ecosystem"
   feed.link ecosystem_issues_packages_url(@ecosystem)
   
+  # Add self link
+  feed.link rel: 'self', href: ecosystem_feed_packages_url(@ecosystem, page: @pagy.page)
+  
+  # Add alternate link to HTML version
+  feed.link rel: 'alternate', type: 'text/html', href: ecosystem_issues_packages_url(@ecosystem)
+  
+  # Add pagination links
+  if @pagy.prev
+    feed.link rel: 'previous', href: ecosystem_feed_packages_url(@ecosystem, page: @pagy.prev)
+  end
+  
+  if @pagy.next
+    feed.link rel: 'next', href: ecosystem_feed_packages_url(@ecosystem, page: @pagy.next)
+  end
+  
   @issues.each do |issue|
     feed.entry(issue, url: host_repository_issue_url(issue.host, issue.repository, issue)) do |entry|
       entry.title "#{issue.repository.full_name}: #{issue.title}"
