@@ -192,6 +192,26 @@
           
           <hr>
           
+          <h6>Pull Request Status</h6>
+          <% if @stats[:pr_status].values.sum > 0 %>
+            <% total_prs = @stats[:pr_status].values.sum %>
+            <% @stats[:pr_status].each do |status, count| %>
+              <div class="d-flex justify-content-between mb-2">
+                <span class="badge bg-<%= status.to_s == 'open' ? 'success' : status.to_s == 'merged' ? 'primary' : 'danger' %>">
+                  <%= status.capitalize %>
+                </span>
+                <span>
+                  <%= number_with_delimiter(count) %>
+                  <small class="text-muted">(<%= (count.to_f / total_prs * 100).round(1) %>%)</small>
+                </span>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-muted small">No PR status data available</p>
+          <% end %>
+          
+          <hr>
+          
           <% if @registry_data %>
             <h6>Registry Information</h6>
             <ul class="list-unstyled small mb-3">
@@ -216,7 +236,7 @@
               
               <% if @per_packita %>
                 <li class="mb-2">
-                  <strong>Per Packita:</strong><br>
+                  <strong  title="Hat tip to @josh_bresssers for the name">Per Packita:</strong><br>
                   <span class="text-success"><%= @per_packita %>%</span>
                   <small class="text-muted d-block">of registry packages with Dependabot activity</small>
                 </li>

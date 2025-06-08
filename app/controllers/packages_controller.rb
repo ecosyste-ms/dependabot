@@ -8,7 +8,6 @@ class PackagesController < ApplicationController
     
     # Fetch a sample package from each ecosystem to get registry metadata
     @ecosystem_registries = {}
-    @per_packita = {}
     @ecosystems.each do |ecosystem|
       sample_package = Package.where(ecosystem: ecosystem)
                              .where.not(metadata: nil)
@@ -22,7 +21,6 @@ class PackagesController < ApplicationController
         if registry['packages_count'] && registry['packages_count'] > 0
           dependabot_packages = @ecosystem_counts[ecosystem]
           total_registry_packages = registry['packages_count']
-          @per_packita[ecosystem] = (dependabot_packages.to_f / total_registry_packages * 100).round(2)
         end
       end
     end
@@ -53,11 +51,22 @@ class PackagesController < ApplicationController
                            .first
     @registry_data = sample_package&.metadata&.dig('registry')
     
+    # Calculate PR status breakdown
+    pr_status_scope = Issue.joins(issue_packages: :package).where(packages: { ecosystem: @ecosystem })
+    open_count = pr_status_scope.where(state: 'open').count
+    merged_count = pr_status_scope.where.not(merged_at: nil).count
+    closed_count = pr_status_scope.where(state: 'closed', merged_at: nil).count
+    
     @stats = {
       total_packages: all_packages.count,
       total_updates: issue_packages.count,
       unique_repositories: unique_repositories_count,
       update_types: issue_packages.group(:update_type).count,
+      pr_status: {
+        open: open_count,
+        merged: merged_count,
+        closed: closed_count
+      },
       recent_activity: issue_packages.where('pr_created_at > ?', 30.days.ago).count,
       avg_updates_per_package: all_packages.where('issues_count > 0').average(:issues_count)&.round(1),
       avg_updates_per_repo: (unique_repositories_count > 0 ? (issue_packages.count.to_f / unique_repositories_count).round(1) : 0),

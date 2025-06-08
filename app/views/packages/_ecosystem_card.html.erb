@@ -36,9 +36,6 @@
             <div class="fw-semibold text-primary fs-5"><%= number_with_delimiter(@ecosystem_counts[ecosystem]) %></div>
             <div class="text-muted small">
               packages
-              <% if @per_packita && @per_packita[ecosystem] %>
-                <span class="text-success">• <%= @per_packita[ecosystem] %>% per packita</span>
-              <% end %>
             </div>
           </div>
           
