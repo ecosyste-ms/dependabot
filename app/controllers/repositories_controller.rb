@@ -32,7 +32,7 @@ class RepositoriesController < ApplicationController
       scope = scope.with_label(params[:label])
     end
     
-    @pagy, @issues = pagy(scope.order('created_at DESC'))
+    @pagy, @issues = pagy_countless(scope.order('created_at DESC'))
   end
 
   def feed

@@ -76,6 +76,8 @@ Rails.application.routes.draw do
     collection do
       get 'search'
       get ':ecosystem/chart_data', to: 'packages#ecosystem_chart_data', as: :ecosystem_chart_data, constraints: { ecosystem: /[^\/]+/ }
+      get ':ecosystem/issues', to: 'packages#ecosystem_issues', as: :ecosystem_issues, constraints: { ecosystem: /[^\/]+/ }
+      get ':ecosystem/feed', to: 'packages#ecosystem_feed', as: :ecosystem_feed, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem/:name/feed', to: 'packages#feed', as: :feed, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
       get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }

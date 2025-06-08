@@ -34,7 +34,7 @@ class PackagesController < ApplicationController
                      .where('issues_count > 0')
                      .order('issues_count DESC, name ASC')
     
-    @pagy, @packages = pagy(packages)
+    @pagy, @packages = pagy_countless(packages)
     
     # Calculate ecosystem-level statistics
     all_packages = Package.where(ecosystem: @ecosystem)
@@ -129,7 +129,7 @@ class PackagesController < ApplicationController
       issue_packages = issue_packages.where(update_type: params[:type])
     end
     
-    @pagy, @issue_packages = pagy(issue_packages)
+    @pagy, @issue_packages = pagy_countless(issue_packages)
   end
 
   def feed
@@ -160,6 +160,34 @@ class PackagesController < ApplicationController
     render 'show', formats: [:atom]
   end
 
+  def ecosystem_issues
+    @ecosystem = params[:ecosystem]
+    
+    # Get all issues for packages in this ecosystem
+    scope = Issue.joins(issue_packages: :package)
+                 .where(packages: { ecosystem: @ecosystem })
+                 .includes(:repository, :host, issue_packages: :package)
+                 .order('issues.created_at DESC')
+    
+    @pagy, @issues = pagy_countless(scope)
+    
+    expires_in 1.hour, public: true
+  end
+
+  def ecosystem_feed
+    @ecosystem = params[:ecosystem]
+    
+    # Get recent issues for packages in this ecosystem
+    @issues = Issue.joins(issue_packages: :package)
+                   .where(packages: { ecosystem: @ecosystem })
+                   .includes(:repository, :host, issue_packages: :package)
+                   .order('issues.created_at DESC')
+                   .limit(50)
+    
+    expires_in 1.hour, public: true
+    render formats: [:atom]
+  end
+
   def search
     @query = params[:q]
     @ecosystem = params[:ecosystem]
@@ -181,7 +209,7 @@ class PackagesController < ApplicationController
         packages = packages.where(ecosystem: @ecosystem)
       end
       
-      @pagy, @packages = pagy(packages)
+      @pagy, @packages = pagy_countless(packages)
       
       # Fetch registry metadata for each ecosystem in search results
       @ecosystem_registries = {}
@@ -197,7 +225,7 @@ class PackagesController < ApplicationController
     else
       # When no search query, show all ecosystems
       @ecosystems = Package.where('issues_count > 0').distinct.pluck(:ecosystem).sort
-      @pagy, @packages = pagy(Package.none)
+      @pagy, @packages = pagy_countless(Package.none)
     end
   end
 

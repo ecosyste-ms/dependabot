@@ -24,7 +24,7 @@ class Api::V1::PackagesController < Api::V1::ApplicationController
     direction = params[:order] == 'asc' ? :asc : :desc
     scope = scope.order(order => direction)
     
-    @pagy, @packages = pagy(scope)
+    @pagy, @packages = pagy_countless(scope)
     
     fresh_when(@packages, public: true)
   end

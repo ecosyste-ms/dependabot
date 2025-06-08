@@ -1,0 +1,111 @@
+<% @meta_title = "#{@ecosystem.capitalize} Dependabot PRs | Ecosyste.ms" %>
+<% @meta_description = "All Dependabot pull requests for packages in the #{@ecosystem} ecosystem" %>
+
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:atom, ecosystem_feed_packages_path(@ecosystem), title: "#{@ecosystem.capitalize} - Dependabot PRs") %>
+<% end %>
+
+<div class="container-sm">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <%= link_to "Packages", packages_path %>
+      </li>
+      <li class="breadcrumb-item">
+        <%= link_to @ecosystem, ecosystem_packages_path(@ecosystem) %>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Dependabot PRs
+      </li>
+    </ol>
+  </nav>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class='mb-0'>
+      <%= @ecosystem.capitalize %> Dependabot PRs
+    </h1>
+    <div class="d-flex gap-2">
+      <%= link_to ecosystem_feed_packages_path(@ecosystem), class: "btn btn-outline-secondary btn-sm" do %>
+        <%= octicon "rss", height: 16, class: "me-1" %>
+        RSS Feed
+      <% end %>
+      <%= link_to "← Back to #{@ecosystem}", ecosystem_packages_path(@ecosystem), class: "btn btn-outline-primary btn-sm" %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12">
+      <% if @issues.any? %>
+        <p class="text-muted mb-4">
+          Showing all Dependabot pull requests for packages in the <strong><%= @ecosystem %></strong> ecosystem
+        </p>
+        
+        <% @issues.each do |issue| %>
+          <%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
+            <div class="card border-0 shadow-sm package-card mb-3">
+              <div class="card-body p-4">
+                <div class="d-flex align-items-start">
+                  <div class="flex-grow-1 min-width-0 me-3">
+                    <div class="mb-1">
+                      <h5 class="mb-1"><%= issue.title %></h5>
+                      <% effective_state = issue.effective_state %>
+                      <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
+                        <%= effective_state.capitalize %>
+                      </span>
+                      <span class="text-muted small">
+                        <%= time_ago_in_words(issue.created_at) %> ago
+                      </span>
+                      <% if issue.comments_count && issue.comments_count > 0 %>
+                        <span class="text-muted small ms-2">
+                          • <%= pluralize issue.comments_count, 'comment' %>
+                        </span>
+                      <% end %>
+                    </div>
+                    
+                    <div class="text-muted small mb-2">
+                      <%= issue.repository.full_name %> #<%= issue.number %>
+                    </div>
+                    
+                    <% issue_packages_array = issue.issue_packages.to_a %>
+                    <% if issue_packages_array.size > 0 %>
+                      <div class="d-flex flex-wrap gap-1 mb-2">
+                        <% issue_packages_array.first(3).each do |issue_package| %>
+                          <span class="badge bg-light text-dark small">
+                            <%= issue_package.package.name %>
+                            <% if issue_package.version_change %>
+                              <span class="ms-1"><%= issue_package.version_change %></span>
+                            <% end %>
+                          </span>
+                          <% if issue_package.update_type %>
+                            <span class="badge bg-<%= issue_package.update_type == 'major' ? 'warning' : issue_package.update_type == 'minor' ? 'info' : issue_package.update_type == 'removal' ? 'danger' : 'success' %> small">
+                              <%= issue_package.update_type %>
+                            </span>
+                          <% end %>
+                        <% end %>
+                        <% if issue_packages_array.size > 3 %>
+                          <span class="badge bg-secondary small">+<%= issue_packages_array.size - 3 %> more</span>
+                        <% end %>
+                      </div>
+                    <% end %>
+                    
+                  </div>
+                  
+                  <div class="flex-shrink-0">
+                    <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+        
+        <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+      <% else %>
+        <div class="alert alert-info" role="alert">
+          <h4 class="alert-heading">No Dependabot PRs Found</h4>
+          <p class="mb-0">No Dependabot pull requests found for packages in the <strong><%= @ecosystem %></strong> ecosystem.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

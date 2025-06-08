@@ -41,7 +41,7 @@ class OwnersController < ApplicationController
                        .includes(:repository, :host, issue_packages: :package)
                        .order('issues.created_at DESC')
     
-    @pagy, @issues = pagy(scope)
+    @pagy, @issues = pagy_countless(scope)
     
     expires_in 1.hour, public: true
   end
