@@ -1,7 +1,7 @@
 {
   "cron": [
     {
-      "command": "bundle exec rake gharchive:import_dependabot_prs[24]",
+      "command": "bundle exec rake gharchive:import_24_hours",
       "schedule": "0 * * * *"
     },
     {
