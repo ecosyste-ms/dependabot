@@ -129,7 +129,50 @@ class Issue < ApplicationRecord
     ecosystem = DEPENDABOT_ECOSYSTEMS.keys & labels.map(&:downcase)
     inferred_ecosystem = DEPENDABOT_ECOSYSTEMS[ecosystem.first]
     
-    # Try single package first
+    # Try requirement update formats first (before generic "from X to Y" pattern)
+    if title.include?(" requirement ")
+      # Format: "Update package requirement from X to Y" (handles complex version ranges)
+      requirement_from_to_match = title.match(/^(?<prefix>.*?)(?<update_word>Update|update)\s+(?<package_name>\S+)\s+requirement\s+from\s+(?<old_version>.+?)\s+to\s+(?<new_version>.+?)(?:\s+in\s+(?<path>.+?))?$/i)
+      if requirement_from_to_match
+        prefix = requirement_from_to_match[:prefix].present? ? 
+                 requirement_from_to_match[:prefix] + requirement_from_to_match[:update_word] :
+                 requirement_from_to_match[:update_word]
+        
+        package_name = requirement_from_to_match[:package_name]
+        repo_url = extract_repo_url_for_package(package_name)
+        
+        return {
+          prefix: prefix,
+          packages: [{
+            name: package_name,
+            old_version: requirement_from_to_match[:old_version].strip,
+            new_version: requirement_from_to_match[:new_version].strip,
+            repository_url: repo_url
+          }],
+          path: requirement_from_to_match[:path],
+          ecosystem: infer_ecosystem_from_path(requirement_from_to_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
+        }
+      end
+      
+      # Format: "Update package requirement to X"
+      requirement_to_match = title.match(/^(?<prefix>.*?)(?:Update|update)\s+(?<package_name>\S+)\s+requirement\s+to\s+(?<new_version>\S+)$/i)
+      if requirement_to_match
+        package_name = requirement_to_match[:package_name]
+        repo_url = extract_repo_url_for_package(package_name)
+        
+        return {
+          prefix: requirement_to_match[:prefix],
+          packages: [{
+            name: package_name,
+            new_version: requirement_to_match[:new_version],
+            repository_url: repo_url
+          }],
+          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
+        }
+      end
+    end
+    
+    # Try single package format
     single_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?<package_name>\S+) from (?<old_version>\S+) to (?<new_version>\S+)(?: in (?<path>.+))?$/)
     
     if single_match
@@ -249,48 +292,6 @@ class Issue < ApplicationRecord
       end
     end
     
-    # Try requirement update formats
-    if title.include?(" requirement ")
-      # Format: "Update package requirement from X to Y" (handles complex version ranges)
-      requirement_from_to_match = title.match(/^(?<prefix>.*?)(?<update_word>Update|update) (?<package_name>\S+) requirement from (?<old_version>.+?) to (?<new_version>.+?)(?:\s+in (?<path>.+?))?$/i)
-      if requirement_from_to_match
-        prefix = requirement_from_to_match[:prefix].present? ? 
-                 requirement_from_to_match[:prefix] + requirement_from_to_match[:update_word] :
-                 requirement_from_to_match[:update_word]
-        
-        package_name = requirement_from_to_match[:package_name]
-        repo_url = extract_repo_url_for_package(package_name)
-        
-        return {
-          prefix: prefix,
-          packages: [{
-            name: package_name,
-            old_version: requirement_from_to_match[:old_version].strip,
-            new_version: requirement_from_to_match[:new_version].strip,
-            repository_url: repo_url
-          }],
-          path: requirement_from_to_match[:path],
-          ecosystem: infer_ecosystem_from_path(requirement_from_to_match[:path], inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
-        }
-      end
-      
-      # Format: "Update package requirement to X"
-      requirement_to_match = title.match(/^(?<prefix>.*?)(?:Update|update) (?<package_name>\S+) requirement to (?<new_version>\S+)$/i)
-      if requirement_to_match
-        package_name = requirement_to_match[:package_name]
-        repo_url = extract_repo_url_for_package(package_name)
-        
-        return {
-          prefix: requirement_to_match[:prefix],
-          packages: [{
-            name: package_name,
-            new_version: requirement_to_match[:new_version],
-            repository_url: repo_url
-          }],
-          ecosystem: infer_ecosystem_from_path(nil, inferred_ecosystem) || discover_ecosystem_from_repository_url(repo_url),
-        }
-      end
-    end
     
     # Try version range format: "Bump package to X, Y" or "Update package to X"
     version_range_match = title.match(/^(?<prefix>.+?)\s+(?<package_name>\S+) to (?<versions>[\d\.,\s]+)$/i)

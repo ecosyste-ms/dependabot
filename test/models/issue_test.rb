@@ -419,6 +419,66 @@ class IssueTest < ActiveSupport::TestCase
     assert_nil metadata[:packages][0][:new_version]
   end
 
+  test "parses criterion requirement format correctly" do
+    issue = create_dependabot_issue("Update criterion requirement from 0.5 to 0.6")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "criterion", metadata[:packages][0][:name]
+    assert_equal "0.5", metadata[:packages][0][:old_version]
+    assert_equal "0.6", metadata[:packages][0][:new_version]
+    assert_nil metadata[:path]
+  end
+
+  test "parses complex package name requirement format" do
+    issue = create_dependabot_issue("Update some-complex_package.name requirement from 1.2.3 to 2.0.0")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "some-complex_package.name", metadata[:packages][0][:name]
+    assert_equal "1.2.3", metadata[:packages][0][:old_version]
+    assert_equal "2.0.0", metadata[:packages][0][:new_version]
+    assert_nil metadata[:path]
+  end
+
+  test "parses pytest-cov requirement with complex version ranges" do
+    issue = create_dependabot_issue("chore(deps): update pytest-cov requirement from <6.0.0,>=4.0.0 to >=4.0.0,<7.0.0")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "chore(deps): update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "pytest-cov", metadata[:packages][0][:name]
+    assert_equal "<6.0.0,>=4.0.0", metadata[:packages][0][:old_version]
+    assert_equal ">=4.0.0,<7.0.0", metadata[:packages][0][:new_version]
+    assert_nil metadata[:path]
+  end
+
+  test "parses dj-database-url requirement with version ranges" do
+    issue = create_dependabot_issue("Update dj-database-url requirement from <3,>=2 to >=2,<4")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "dj-database-url", metadata[:packages][0][:name]
+    assert_equal "<3,>=2", metadata[:packages][0][:old_version]
+    assert_equal ">=2,<4", metadata[:packages][0][:new_version]
+    assert_nil metadata[:path]
+  end
+
+  test "parses @types/node requirement with path" do
+    issue = create_dependabot_issue("Update @types/node requirement from ^22.15.3 to ^22.15.30 in /playwright")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Update", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "@types/node", metadata[:packages][0][:name]
+    assert_equal "^22.15.3", metadata[:packages][0][:old_version]
+    assert_equal "^22.15.30", metadata[:packages][0][:new_version]
+    assert_equal "/playwright", metadata[:path]
+  end
+
   test "infers github actions ecosystem from path" do
     issue = Issue.new(
       repository: @repository,
