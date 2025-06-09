@@ -17,6 +17,21 @@
                 • <%= pluralize issue.comments_count, 'comment' %>
               </span>
             <% end %>
+            <% if issue.merged_by.present? %>
+              <span class="text-muted small ms-2">
+                • merged by <%= issue.merged_by %>
+              </span>
+            <% elsif issue.closed_by.present? %>
+              <% if issue.auto_closed_as_outdated? %>
+                <span class="text-muted small ms-2">
+                  • <span class="text-warning">auto-closed (outdated)</span>
+                </span>
+              <% else %>
+                <span class="text-muted small ms-2">
+                  • closed by <%= issue.closed_by %>
+                </span>
+              <% end %>
+            <% end %>
           </div>
           
           <% if issue.labels.any? %>

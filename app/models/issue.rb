@@ -497,6 +497,10 @@ class Issue < ApplicationRecord
     "https://github.com/#{username}.png"
   end
   
+  def auto_closed_as_outdated?
+    closed_by.present? && closed_by == user && merged_at.blank?
+  end
+  
   private
   
   def infer_ecosystem_from_path(path, label_ecosystem)

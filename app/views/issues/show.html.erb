@@ -79,6 +79,9 @@
                   <%= octicon "git-merge", class: "text-success me-1" %>
                   <%= @issue.merged_at.strftime('%B %d, %Y at %I:%M %p UTC') %><br>
                   <small class="text-muted">(<%= time_ago_in_words(@issue.merged_at) %> ago)</small>
+                  <% if @issue.merged_by.present? %>
+                    <br><small class="text-muted">by <%= @issue.merged_by %></small>
+                  <% end %>
                 </div>
               <% elsif @issue.closed_at %>
                 <div class="col-md-6">
@@ -86,6 +89,13 @@
                   <%= octicon "issue-closed", class: "text-danger me-1" %>
                   <%= @issue.closed_at.strftime('%B %d, %Y at %I:%M %p UTC') %><br>
                   <small class="text-muted">(<%= time_ago_in_words(@issue.closed_at) %> ago)</small>
+                  <% if @issue.closed_by.present? %>
+                    <% if @issue.auto_closed_as_outdated? %>
+                      <br><small class="text-warning">auto-closed (outdated)</small>
+                    <% else %>
+                      <br><small class="text-muted">by <%= @issue.closed_by %></small>
+                    <% end %>
+                  <% end %>
                 </div>
               <% end %>
               
