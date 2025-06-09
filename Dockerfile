@@ -30,7 +30,6 @@ RUN bundle config --global frozen 1 \
 # Copy application code
 COPY . $APP_ROOT
 
-RUN bundle exec bootsnap precompile --gemfile app/ lib/
 
 # Precompile assets for a production environment.
 # This is done to include assets in production images on Dockerhub.
