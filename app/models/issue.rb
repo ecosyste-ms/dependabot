@@ -586,33 +586,30 @@ class Issue < ApplicationRecord
         next # Skip this package and continue with the rest
       end
       
-      # Create the association if it doesn't exist
-      issue_package = issue_packages.find_or_initialize_by(package: package)
-      
-      # Update the version information
+      # Create or find the association with race condition handling
       update_type = if package_data[:is_removal]
         'removal'
       else
         determine_update_type(package_data[:old_version], package_data[:new_version])
       end
       
-      issue_package.assign_attributes(
-        old_version: package_data[:old_version],
-        new_version: package_data[:new_version],
-        path: metadata[:path],
-        update_type: update_type,
-        pr_created_at: created_at
-      )
-      
-      if issue_package.changed?
-        begin
-          issue_package.save!
-          affected_package_ids << package.id
-        rescue ActiveRecord::RecordInvalid => e
-          Rails.logger.warn "Failed to save issue_package for #{package_data[:name]}: #{e.message}"
-        end
-      else
+      begin
+        # Try to create the association
+        issue_package = issue_packages.create!(
+          package: package,
+          old_version: package_data[:old_version],
+          new_version: package_data[:new_version],
+          path: metadata[:path],
+          update_type: update_type,
+          pr_created_at: created_at
+        )
         affected_package_ids << package.id
+      rescue ActiveRecord::RecordNotUnique, PG::UniqueViolation
+        # Handle race condition - association already exists, skip it
+        Rails.logger.info "IssuePackage already exists for issue #{id} and package #{package.id}, skipping"
+        affected_package_ids << package.id
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.warn "Failed to save issue_package for #{package_data[:name]}: #{e.message}"
       end
     end
     
