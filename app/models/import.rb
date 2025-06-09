@@ -145,6 +145,12 @@ class Import < ApplicationRecord
   
   private
   
+  def self.sanitize_string(str)
+    return nil if str.nil?
+    # Remove null bytes that cause PostgreSQL errors
+    str.delete("\0")
+  end
+  
   def self.create_failed_import(filename, error_message)
     # Only create if one doesn't already exist
     return if exists?(filename: filename)
@@ -354,26 +360,26 @@ class Import < ApplicationRecord
     {
       node_id: pr_data['node_id'],
       number: pr_data['number'],
-      title: pr_data['title'],
-      body: pr_data['body'],
+      title: sanitize_string(pr_data['title']),
+      body: sanitize_string(pr_data['body']),
       state: pr_data['state'],
       locked: pr_data['locked'] || false,
       comments_count: pr_data['comments'] || 0,
       created_at: Time.parse(pr_data['created_at']),
       updated_at: Time.parse(pr_data['updated_at']),
       closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
-      user: pr_data['user']['login'],
-      labels: (pr_data['labels'] || []).map { |l| l['name'] },
-      assignees: (pr_data['assignees'] || []).map { |a| a['login'] },
+      user: sanitize_string(pr_data['user']['login']),
+      labels: (pr_data['labels'] || []).map { |l| sanitize_string(l['name']) },
+      assignees: (pr_data['assignees'] || []).map { |a| sanitize_string(a['login']) },
       pull_request: true,
-      author_association: pr_data['author_association'],
-      state_reason: pr_data['state_reason'],
+      author_association: sanitize_string(pr_data['author_association']),
+      state_reason: sanitize_string(pr_data['state_reason']),
       merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
-      merged_by: pr_data['merged_by']&.dig('login'),
-      closed_by: pr_data['closed_by']&.dig('login'),
+      merged_by: sanitize_string(pr_data['merged_by']&.dig('login')),
+      closed_by: sanitize_string(pr_data['closed_by']&.dig('login')),
       draft: pr_data['draft'],
       mergeable: pr_data['mergeable'],
-      mergeable_state: pr_data['mergeable_state'],
+      mergeable_state: sanitize_string(pr_data['mergeable_state']),
       rebaseable: pr_data['rebaseable'],
       review_comments_count: pr_data['review_comments'] || 0,
       commits_count: pr_data['commits'] || 0,
