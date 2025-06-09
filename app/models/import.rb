@@ -35,7 +35,10 @@ class Import < ApplicationRecord
       
       if response.code != '200'
         error_msg = "HTTP #{response.code}"
-        create_failed_import(filename, error_msg)
+        # Don't record 404s - file doesn't exist yet, will retry later
+        if response.code != '404'
+          create_failed_import(filename, error_msg)
+        end
         return { success: false, error: error_msg }
       end
       
