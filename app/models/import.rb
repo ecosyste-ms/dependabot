@@ -393,15 +393,18 @@ class Import < ApplicationRecord
     github_host = Host.find_by(name: 'GitHub')
     return nil unless github_host
     
+    # Use case-insensitive lookup to match the existing index
+    existing_repo = Repository.find_by('lower(full_name) = ? AND host_id = ?', repo_name.downcase, github_host.id)
+    return existing_repo if existing_repo
+    
     begin
-      Repository.find_or_create_by!(
+      Repository.create!(
         full_name: repo_name,
-        host: github_host
-      ) do |repo|
-        repo.owner = owner_name
-      end
+        host: github_host,
+        owner: owner_name
+      )
     rescue ActiveRecord::RecordNotUnique
-      # Handle race condition - find the existing record using the same constraint
+      # Handle race condition - find the existing record
       Repository.find_by('lower(full_name) = ? AND host_id = ?', repo_name.downcase, github_host.id)
     rescue => e
       Rails.logger.error "Failed to find/create repository #{repo_name}: #{e.message}"
