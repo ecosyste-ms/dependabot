@@ -241,7 +241,10 @@ class Import < ApplicationRecord
   end
   
   def self.process_comment_event(event, repo_name, stats)
-    issue_data = event['payload']['issue']
+    payload = event['payload']
+    return unless payload && payload['issue']
+    
+    issue_data = payload['issue']
     return unless issue_data['pull_request']
     return unless issue_data['user']
     
