@@ -623,6 +623,49 @@ class IssueTest < ActiveSupport::TestCase
     )
   end
 
+  test "parses Python packages with extras from table" do
+    title = "Bump the python-deps group with 7 updates"
+    body = <<~BODY
+      Bump the python-deps group with 7 updates:
+
+      | Package | From | To |
+      | --- | --- | --- |
+      | [pillow](https://github.com/python-pillow/Pillow) | `11.1.0` | `11.2.1` |
+      | [hiredis](https://github.com/redis/hiredis-py) | `3.1.0` | `3.2.1` |
+      | [celery](https://github.com/celery/celery) | `5.5.0` | `5.5.3` |
+      | [django-celery-beat](https://github.com/celery/django-celery-beat) | `2.7.0` | `2.8.1` |
+      | [uvicorn[standard]](https://github.com/encode/uvicorn) | `0.34.0` | `0.34.3` |
+      | [django](https://github.com/django/django) | `5.1.8` | `5.2.2` |
+      | [django-allauth[mfa]](https://github.com/sponsors/pennersr) | `65.7.0` | `65.9.0` |
+    BODY
+    
+    issue = create_dependabot_issue_with_body(title, body)
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 7, metadata[:packages].length
+    
+    # Check packages without extras work normally
+    pillow_pkg = metadata[:packages].find { |p| p[:name] == "pillow" }
+    assert_not_nil pillow_pkg
+    assert_equal "pillow", pillow_pkg[:name]
+    assert_equal "11.1.0", pillow_pkg[:old_version]
+    assert_equal "11.2.1", pillow_pkg[:new_version]
+    
+    # Check packages with extras have extras stripped from name
+    uvicorn_pkg = metadata[:packages].find { |p| p[:name] == "uvicorn" }
+    assert_not_nil uvicorn_pkg
+    assert_equal "uvicorn", uvicorn_pkg[:name]  # Should be "uvicorn", not "uvicorn[standard]"
+    assert_equal "0.34.0", uvicorn_pkg[:old_version]
+    assert_equal "0.34.3", uvicorn_pkg[:new_version]
+    
+    allauth_pkg = metadata[:packages].find { |p| p[:name] == "django-allauth" }
+    assert_not_nil allauth_pkg
+    assert_equal "django-allauth", allauth_pkg[:name]  # Should be "django-allauth", not "django-allauth[mfa]"
+    assert_equal "65.7.0", allauth_pkg[:old_version]
+    assert_equal "65.9.0", allauth_pkg[:new_version]
+  end
+
   def create_dependabot_issue_with_body(title, body)
     Issue.new(
       repository: @repository,

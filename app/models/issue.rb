@@ -138,7 +138,8 @@ class Issue < ApplicationRecord
                  requirement_from_to_match[:prefix] + requirement_from_to_match[:update_word] :
                  requirement_from_to_match[:update_word]
         
-        package_name = requirement_from_to_match[:package_name]
+        # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+        package_name = requirement_from_to_match[:package_name].split('[').first
         repo_url = extract_repo_url_for_package(package_name)
         
         return {
@@ -378,10 +379,12 @@ class Issue < ApplicationRecord
         # Extract package name from markdown link or plain text
         package_name = if package_cell.include?('[')
           # Extract from [package-name](url) format
-          package_cell.match(/\[([^\]]+)\]/)[1]
+          full_name = package_cell.match(/\[([^\]]+)\]/)[1]
+          # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+          full_name.split('[').first
         else
-          # Plain text package name
-          package_cell.strip
+          # Plain text package name, also handle extras
+          package_cell.strip.split('[').first
         end
         
         repo_url = extract_repo_url_for_package(package_name)
@@ -396,9 +399,11 @@ class Issue < ApplicationRecord
     else
       # Look for individual "Updates `package` from X to Y" lines
       body.scan(/Updates `([^`]+)` from ([^\s]+) to ([^\s]+)/) do |package_name, from_version, to_version|
-        repo_url = extract_repo_url_for_package(package_name)
+        # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+        clean_package_name = package_name.split('[').first
+        repo_url = extract_repo_url_for_package(clean_package_name)
         package_data = {
-          name: package_name,
+          name: clean_package_name,
           old_version: from_version,
           new_version: to_version
         }
@@ -410,9 +415,11 @@ class Issue < ApplicationRecord
       if packages.empty? && body.include?("Performed the following updates:")
         # Parse "- Updated PackageName from X to Y in /path" lines
         body.scan(/- Updated ([^\s]+) from ([^\s]+) to ([^\s]+)(?: in ([^\n]+))?/) do |package_name, from_version, to_version, path|
-          repo_url = extract_repo_url_for_package(package_name)
+          # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+          clean_package_name = package_name.split('[').first
+          repo_url = extract_repo_url_for_package(clean_package_name)
           package_data = {
-            name: package_name,
+            name: clean_package_name,
             old_version: from_version,
             new_version: to_version,
             path: path&.strip
@@ -431,9 +438,11 @@ class Issue < ApplicationRecord
     
     # Look for "Removes `package-name`" patterns
     body.scan(/Removes `([^`]+)`/) do |package_name|
-      repo_url = extract_repo_url_for_package(package_name[0])
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      clean_package_name = package_name[0].split('[').first
+      repo_url = extract_repo_url_for_package(clean_package_name)
       package_data = {
-        name: package_name[0],
+        name: clean_package_name,
         old_version: nil, # We don't usually get version info for removals
         new_version: nil
       }
@@ -443,9 +452,11 @@ class Issue < ApplicationRecord
     
     # Look for "Removes [package-name]" patterns
     body.scan(/Removes \[([^\]]+)\]/) do |package_name|
-      repo_url = extract_repo_url_for_package(package_name[0])
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      clean_package_name = package_name[0].split('[').first
+      repo_url = extract_repo_url_for_package(clean_package_name)
       package_data = {
-        name: package_name[0],
+        name: clean_package_name,
         old_version: nil,
         new_version: nil
       }
@@ -455,9 +466,11 @@ class Issue < ApplicationRecord
     
     # Look for "- Removes package-name" patterns in lists
     body.scan(/^[\s]*[-*]\s+Removes\s+([^\s\n]+)/i) do |package_name|
-      repo_url = extract_repo_url_for_package(package_name[0])
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      clean_package_name = package_name[0].split('[').first
+      repo_url = extract_repo_url_for_package(clean_package_name)
       package_data = {
-        name: package_name[0],
+        name: clean_package_name,
         old_version: nil,
         new_version: nil
       }
