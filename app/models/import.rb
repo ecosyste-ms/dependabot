@@ -59,7 +59,11 @@ class Import < ApplicationRecord
       { success: true, **stats }
       
     rescue => e
-      create_failed_import(filename, e.message)
+      error_details = "#{e.class}: #{e.message}\n\nBacktrace:\n#{e.backtrace.first(15).join("\n")}"
+      Rails.logger.error "Import failed for #{filename}: #{error_details}"
+      # Truncate if too long for database field
+      truncated_error = error_details.length > 5000 ? "#{error_details[0..4900]}...\n[truncated]" : error_details
+      create_failed_import(filename, truncated_error)
       { success: false, error: e.message }
     end
   end
