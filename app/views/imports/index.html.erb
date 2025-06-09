@@ -45,7 +45,7 @@
           <% @imports.each do |import| %>
             <tr class="<%= import.success? ? 'table-success' : 'table-danger' %>">
               <td><%= time_ago_in_words(import.created_at) %> ago</td>
-              <td><code><%= import.filename %></code></td>
+              <td><code><%= link_to import.filename, import.url, target: '_blank', class: 'text-decoration-none' %></code></td>
               <td>
                 <% if import.success? %>
                   <span class="badge bg-success">Success</span>
