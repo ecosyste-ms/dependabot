@@ -1,6 +1,6 @@
 class ImportsController < ApplicationController
   def index
-    @pagy, @imports = pagy(Import.order("created_at DESC"))
+    @pagy, @imports = pagy(Import.order("filename DESC"))
     @recent_stats = {
       total_recent: Import.where('created_at > ?', 24.hours.ago).count,
       successful_recent: Import.where('created_at > ?', 24.hours.ago).where(success: true).count,
