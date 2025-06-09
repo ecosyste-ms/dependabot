@@ -563,6 +563,52 @@ class IssueTest < ActiveSupport::TestCase
     Package.find_by(name: "test-valid-package")&.destroy
   end
 
+  test "handles race condition when creating packages" do
+    issue = Issue.create!(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Test race condition",
+      number: 998,
+      state: "open",
+      pull_request: true,
+      uuid: "test-uuid-race-condition"
+    )
+
+    # Create a package first to simulate the race condition scenario
+    existing_package = Package.create!(
+      name: "@metrostar/comet-extras",
+      ecosystem: "npm"
+    )
+
+    metadata = {
+      ecosystem: "npm",
+      packages: [
+        { name: "@metrostar/comet-extras", old_version: "1.0.0", new_version: "2.0.0" }
+      ]
+    }
+
+    initial_package_count = Package.count
+
+    # Mock find_or_create_by! to raise RecordNotUnique to simulate race condition
+    Package.stubs(:find_or_create_by!).raises(ActiveRecord::RecordNotUnique)
+    
+    # This should not raise an exception and should handle the race condition gracefully
+    assert_nothing_raised do
+      issue.send(:create_package_associations, metadata)
+    end
+
+    # Package count should remain the same (using existing package)
+    assert_equal initial_package_count, Package.count
+
+    # The issue should still be associated with the package
+    assert_equal 1, issue.issue_packages.count
+    assert_equal existing_package, issue.packages.first
+
+    # Clean up
+    existing_package.destroy
+  end
+
   private
 
   def create_dependabot_issue(title)

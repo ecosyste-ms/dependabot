@@ -521,22 +521,22 @@ class Issue < ApplicationRecord
     metadata[:packages].each do |package_data|
       next unless package_data[:name]
       
-      # Find or create the package with error handling
-      package = Package.find_by(name: package_data[:name], ecosystem: metadata[:ecosystem])
-      
-      unless package
-        package = Package.new(name: package_data[:name], ecosystem: metadata[:ecosystem])
-        unless package.valid?
-          Rails.logger.warn "Failed to create package #{package_data[:name]} (#{metadata[:ecosystem]}): #{package.errors.full_messages.join(', ')}"
+      # Find or create the package with proper race condition handling
+      begin
+        package = Package.find_or_create_by!(
+          name: package_data[:name], 
+          ecosystem: metadata[:ecosystem]
+        )
+      rescue ActiveRecord::RecordNotUnique
+        # Handle race condition - another process created the package between find and create
+        package = Package.find_by(name: package_data[:name], ecosystem: metadata[:ecosystem])
+        unless package
+          Rails.logger.warn "Race condition handling failed for package #{package_data[:name]} (#{metadata[:ecosystem]}) - could not find existing record"
           next # Skip this package and continue with the rest
         end
-        
-        begin
-          package.save!
-        rescue ActiveRecord::RecordInvalid => e
-          Rails.logger.warn "Failed to save package #{package_data[:name]} (#{metadata[:ecosystem]}): #{e.message}"
-          next # Skip this package and continue with the rest
-        end
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.warn "Failed to create package #{package_data[:name]} (#{metadata[:ecosystem]}): #{e.message}"
+        next # Skip this package and continue with the rest
       end
       
       # Create the association if it doesn't exist
