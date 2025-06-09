@@ -473,6 +473,8 @@ class Issue < ApplicationRecord
     if metadata.present?
       update_column(:dependency_metadata, metadata)
       create_package_associations(metadata)
+    else
+      []
     end
   end
 
@@ -516,7 +518,9 @@ class Issue < ApplicationRecord
   end
   
   def create_package_associations(metadata)
-    return unless metadata[:ecosystem] && metadata[:packages]
+    return [] unless metadata[:ecosystem] && metadata[:packages]
+    
+    affected_package_ids = []
     
     metadata[:packages].each do |package_data|
       next unless package_data[:name]
@@ -560,11 +564,16 @@ class Issue < ApplicationRecord
       if issue_package.changed?
         begin
           issue_package.save!
+          affected_package_ids << package.id
         rescue ActiveRecord::RecordInvalid => e
           Rails.logger.warn "Failed to save issue_package for #{package_data[:name]}: #{e.message}"
         end
+      else
+        affected_package_ids << package.id
       end
     end
+    
+    affected_package_ids
   end
   
   def determine_update_type(old_version, new_version)

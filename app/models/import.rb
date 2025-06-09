@@ -25,7 +25,7 @@ class Import < ApplicationRecord
     update!(
       success: nil,
       error_message: nil,
-      **self.class.default_stats
+      **self.class.default_stats.except(:affected_package_ids)
     )
     
     # Retry the import
@@ -75,17 +75,22 @@ class Import < ApplicationRecord
       decompressed_data = Zlib::GzipReader.new(StringIO.new(response.body)).read
       stats = process_gharchive_data(decompressed_data)
       
+      # Update package counts for affected packages
+      update_package_counts(stats)
+      
       # Record successful import (skip if already exists)
       unless exists?(filename: filename)
+        # Extract only the database fields (exclude affected_package_ids Set)
+        db_stats = stats.except(:affected_package_ids)
         create!(
           filename: filename,
           imported_at: Time.current,
-          **stats,
+          **db_stats,
           success: true
         )
       end
       
-      { success: true, **stats }
+      { success: true, **stats.except(:affected_package_ids) }
       
     rescue => e
       error_details = "#{e.class}: #{e.message}\n\nBacktrace:\n#{e.backtrace.first(15).join("\n")}"
@@ -147,7 +152,7 @@ class Import < ApplicationRecord
     create!(
       filename: filename,
       imported_at: Time.current,
-      **default_stats,
+      **default_stats.except(:affected_package_ids),
       success: false,
       error_message: error_message
     )
@@ -162,14 +167,20 @@ class Import < ApplicationRecord
       review_comment_count: 0,
       review_thread_count: 0,
       created_count: 0,
-      updated_count: 0
+      updated_count: 0,
+      affected_package_ids: Set.new
     }
   end
   
   def self.add_stats_to_totals(totals, stats)
     default_stats.keys.each do |key|
-      totals[key] ||= 0
-      totals[key] += stats[key] || 0
+      if key == :affected_package_ids
+        totals[key] ||= Set.new
+        totals[key].merge(stats[key] || Set.new)
+      else
+        totals[key] ||= 0
+        totals[key] += stats[key] || 0
+      end
     end
   end
   
@@ -231,7 +242,7 @@ class Import < ApplicationRecord
     was_new = issue.new_record?
     issue.assign_attributes(map_github_pr_data(pr_data, repository))
     
-    if save_issue_with_metadata(issue)
+    if save_issue_with_metadata(issue, stats)
       if was_new
         stats[:created_count] += 1
       else
@@ -263,7 +274,7 @@ class Import < ApplicationRecord
       was_new = issue.new_record?
       issue.assign_attributes(map_github_pr_data(issue_data, repository))
       
-      if save_issue_with_metadata(issue)
+      if save_issue_with_metadata(issue, stats)
         stats[:created_count] += 1 if was_new
         stats[:comment_count] += 1 if was_new
       end
@@ -373,13 +384,16 @@ class Import < ApplicationRecord
     }
   end
   
-  def self.save_issue_with_metadata(issue)
+  def self.save_issue_with_metadata(issue, stats = nil)
     if issue.closed_at.present?
       issue.time_to_close = issue.closed_at - issue.created_at
     end
     
     if issue.save
-      issue.update_dependabot_metadata
+      affected_package_ids = issue.update_dependabot_metadata
+      if stats && affected_package_ids.any?
+        stats[:affected_package_ids].merge(affected_package_ids)
+      end
       true
     else
       false
@@ -426,5 +440,18 @@ class Import < ApplicationRecord
     else
       nil
     end
+  end
+  
+  def self.update_package_counts(stats)
+    affected_package_ids = stats[:affected_package_ids]
+    return unless affected_package_ids&.any?
+    
+    Rails.logger.info "Updating repository counts for #{affected_package_ids.size} affected packages"
+    
+    Package.where(id: affected_package_ids.to_a).find_each do |package|
+      package.update_unique_repositories_counts!
+    end
+    
+    Rails.logger.info "Repository counts updated for affected packages"
   end
 end
