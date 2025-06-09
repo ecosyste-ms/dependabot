@@ -173,11 +173,37 @@ class Issue < ApplicationRecord
       end
     end
     
+    # Try comma-separated packages format: "Bump package1, package2 from X to Y"
+    comma_separated_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?<package_names>[^,]+(?:,\s*[^,\s]+)+) from (?<old_version>\S+) to (?<new_version>\S+)(?: in (?<path>.+))?$/i)
+    
+    if comma_separated_match
+      package_names = comma_separated_match[:package_names].split(',').map(&:strip)
+      packages = package_names.map do |package_name|
+        # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+        clean_package_name = package_name.split('[').first.strip.gsub(/\s+/, '')
+        repo_url = extract_repo_url_for_package(clean_package_name)
+        {
+          name: clean_package_name,
+          old_version: comma_separated_match[:old_version],
+          new_version: comma_separated_match[:new_version],
+          repository_url: repo_url
+        }
+      end
+      
+      return {
+        prefix: comma_separated_match[:prefix],
+        packages: packages,
+        path: comma_separated_match[:path],
+        ecosystem: infer_ecosystem_from_path(comma_separated_match[:path], inferred_ecosystem),
+      }
+    end
+    
     # Try single package format
     single_match = title.match(/^(?<prefix>.+?)(?:\s+|:\s+)(?:bump\s+)?(?<package_name>\S+) from (?<old_version>\S+) to (?<new_version>\S+)(?: in (?<path>.+))?$/)
     
     if single_match
-      package_name = single_match[:package_name]
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      package_name = single_match[:package_name].split('[').first.strip.gsub(/\s+/, '')
       repo_url = extract_repo_url_for_package(package_name)
       
       return {
@@ -295,11 +321,13 @@ class Issue < ApplicationRecord
     
     
     # Try version range format: "Bump package to X, Y" or "Update package to X"
-    version_range_match = title.match(/^(?<prefix>.+?)\s+(?<package_name>\S+) to (?<versions>[\d\.,\s]+)$/i)
+    # Use [^\s,]+ to avoid capturing commas in package names
+    version_range_match = title.match(/^(?<prefix>.+?)\s+(?<package_name>[^\s,]+) to (?<versions>[\d\.,\s]+)$/i)
     
     if version_range_match
       versions = version_range_match[:versions].split(',').map(&:strip)
-      package_name = version_range_match[:package_name]
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      package_name = version_range_match[:package_name].split('[').first.strip.gsub(/\s+/, '')
       repo_url = extract_repo_url_for_package(package_name)
       
       # For now, just use the last version as the new version
@@ -315,10 +343,12 @@ class Issue < ApplicationRecord
     end
     
     # Try simple bump format: "bump package" or "all: bump package"
-    simple_bump_match = title.match(/^(?<prefix>.*?)(?:bump|Bump)\s+(?<package_name>\S+)$/i)
+    # Use [^\s,]+ to avoid capturing commas in package names
+    simple_bump_match = title.match(/^(?<prefix>.*?)(?:bump|Bump)\s+(?<package_name>[^\s,]+)$/i)
     
     if simple_bump_match && body.present?
-      package_name = simple_bump_match[:package_name]
+      # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
+      package_name = simple_bump_match[:package_name].split('[').first.strip.gsub(/\s+/, '')
       repo_url = extract_repo_url_for_package(package_name)
       
       # Look for version information in body
@@ -380,11 +410,11 @@ class Issue < ApplicationRecord
         package_name = if package_cell.include?('[')
           # Extract from [package-name](url) format
           full_name = package_cell.match(/\[([^\]]+)\]/)[1]
-          # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
-          full_name.split('[').first
+          # For Python packages, remove extras and clean up spaces
+          full_name.split('[').first.strip.gsub(/\s+/, '')
         else
-          # Plain text package name, also handle extras
-          package_cell.strip.split('[').first
+          # Plain text package name, also handle extras and spaces
+          package_cell.strip.split('[').first.strip.gsub(/\s+/, '')
         end
         
         repo_url = extract_repo_url_for_package(package_name)
@@ -400,7 +430,7 @@ class Issue < ApplicationRecord
       # Look for individual "Updates `package` from X to Y" lines
       body.scan(/Updates `([^`]+)` from ([^\s]+) to ([^\s]+)/) do |package_name, from_version, to_version|
         # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
-        clean_package_name = package_name.split('[').first
+        clean_package_name = package_name.split('[').first.strip.gsub(/\s+/, '')
         repo_url = extract_repo_url_for_package(clean_package_name)
         package_data = {
           name: clean_package_name,
@@ -416,7 +446,7 @@ class Issue < ApplicationRecord
         # Parse "- Updated PackageName from X to Y in /path" lines
         body.scan(/- Updated ([^\s]+) from ([^\s]+) to ([^\s]+)(?: in ([^\n]+))?/) do |package_name, from_version, to_version, path|
           # For Python packages, remove extras (e.g., "moto[dynamodb]" -> "moto")
-          clean_package_name = package_name.split('[').first
+          clean_package_name = package_name.split('[').first.strip.gsub(/\s+/, '')
           repo_url = extract_repo_url_for_package(clean_package_name)
           package_data = {
             name: clean_package_name,

@@ -666,6 +666,65 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal "65.9.0", allauth_pkg[:new_version]
   end
 
+  test "parses comma-separated packages" do
+    issue = create_dependabot_issue("Bump cookie, express from 1.0.0 to 2.0.0")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 2, metadata[:packages].length
+    
+    # Check first package
+    cookie_pkg = metadata[:packages].find { |p| p[:name] == "cookie" }
+    assert_not_nil cookie_pkg
+    assert_equal "cookie", cookie_pkg[:name]
+    assert_equal "1.0.0", cookie_pkg[:old_version]
+    assert_equal "2.0.0", cookie_pkg[:new_version]
+    
+    # Check second package
+    express_pkg = metadata[:packages].find { |p| p[:name] == "express" }
+    assert_not_nil express_pkg
+    assert_equal "express", express_pkg[:name]
+    assert_equal "1.0.0", express_pkg[:old_version]
+    assert_equal "2.0.0", express_pkg[:new_version]
+  end
+
+  test "parses comma-separated packages with Python extras" do
+    issue = create_dependabot_issue("Bump uvicorn[standard], django-allauth[mfa] from 1.0.0 to 2.0.0")
+    metadata = issue.parse_dependabot_metadata
+    
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 2, metadata[:packages].length
+    
+    # Check packages have extras stripped
+    uvicorn_pkg = metadata[:packages].find { |p| p[:name] == "uvicorn" }
+    assert_not_nil uvicorn_pkg
+    assert_equal "uvicorn", uvicorn_pkg[:name]  # Should be "uvicorn", not "uvicorn[standard]"
+    
+    allauth_pkg = metadata[:packages].find { |p| p[:name] == "django-allauth" }
+    assert_not_nil allauth_pkg
+    assert_equal "django-allauth", allauth_pkg[:name]  # Should be "django-allauth", not "django-allauth[mfa]"
+  end
+
+  test "removes spaces from package names in tables" do
+    title = "Bump the test-group group with 1 update"
+    body = <<~BODY
+      Bump the test-group group with 1 update:
+
+      | Package | From | To |
+      | --- | --- | --- |
+      | [package with spaces](https://github.com/example/package-with-spaces) | `1.0.0` | `2.0.0` |
+    BODY
+    
+    issue = create_dependabot_issue_with_body(title, body)
+    metadata = issue.parse_dependabot_metadata
+    
+    # Package name should have spaces removed
+    pkg = metadata[:packages].first
+    assert_equal "packagewithspaces", pkg[:name]  # Spaces should be removed
+    assert_equal "1.0.0", pkg[:old_version]
+    assert_equal "2.0.0", pkg[:new_version]
+  end
+
   def create_dependabot_issue_with_body(title, body)
     Issue.new(
       repository: @repository,
