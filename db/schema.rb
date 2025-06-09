@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_08_073611) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_09_110248) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -132,8 +132,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_08_073611) do
     t.integer "unique_repositories_count", default: 0
     t.integer "unique_repositories_count_past_30_days", default: 0
     t.index "lower((repository_url)::text)", name: "index_packages_on_lower_repository_url"
+    t.index ["ecosystem", "name"], name: "index_packages_on_ecosystem_and_name", unique: true
     t.index ["issues_count"], name: "index_packages_on_issues_count"
-    t.index ["name", "ecosystem"], name: "index_packages_on_name_and_ecosystem", unique: true
     t.index ["unique_repositories_count"], name: "index_packages_on_unique_repositories_count"
     t.index ["unique_repositories_count_past_30_days"], name: "index_packages_on_unique_repositories_count_past_30_days"
   end
