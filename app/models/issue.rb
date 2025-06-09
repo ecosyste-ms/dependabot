@@ -609,7 +609,7 @@ class Issue < ApplicationRecord
         Rails.logger.info "IssuePackage already exists for issue #{id} and package #{package.id}, skipping"
         affected_package_ids << package.id
       rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.warn "Failed to save issue_package for #{package_data[:name]}: #{e.message}"
+        # already exists
       end
     end
     
