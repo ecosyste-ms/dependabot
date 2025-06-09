@@ -9,6 +9,11 @@
             <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
               <%= effective_state.capitalize %>
             </span>
+            <% if issue.locked %>
+              <span class="badge bg-warning me-2">
+                Locked
+              </span>
+            <% end %>
             <span class="text-muted small">
               <%= time_ago_in_words(issue.created_at) %> ago
             </span>
