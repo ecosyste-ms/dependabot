@@ -20,6 +20,35 @@ class Import < ApplicationRecord
     DateTime.new(parts[0], parts[1], parts[2], parts[3])
   end
   
+  def retry!
+    # Clear previous error state
+    update!(
+      success: nil,
+      error_message: nil,
+      **self.class.default_stats
+    )
+    
+    # Retry the import
+    result = self.class.import_hour(datetime)
+    
+    # Update the record with new results
+    if result[:success]
+      update!(
+        imported_at: Time.current,
+        success: true,
+        **result.except(:success)
+      )
+    else
+      update!(
+        imported_at: Time.current,
+        success: false,
+        error_message: result[:error]
+      )
+    end
+    
+    result
+  end
+  
   def self.already_imported?(datetime)
     filename = "#{datetime.year}-#{datetime.month.to_s.rjust(2, '0')}-#{datetime.day.to_s.rjust(2, '0')}-#{datetime.hour}.json.gz"
     exists?(filename: filename)
