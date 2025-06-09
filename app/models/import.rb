@@ -243,6 +243,7 @@ class Import < ApplicationRecord
   def self.process_comment_event(event, repo_name, stats)
     issue_data = event['payload']['issue']
     return unless issue_data['pull_request']
+    return unless issue_data['user']
     
     pr_author = issue_data['user']['login']
     return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
