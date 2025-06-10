@@ -275,7 +275,7 @@
       <% end %>
 
       <!-- Security Advisories -->
-      <% if @issue.advisories.any? %>
+      <% if @issue.advisories.not_withdrawn.any? %>
         <div class="card mb-4">
           <div class="card-header">
             <h5 class="mb-0">
@@ -284,7 +284,7 @@
             </h5>
           </div>
           <div class="card-body">
-            <% @issue.advisories.each do |advisory| %>
+            <% @issue.advisories.not_withdrawn.each do |advisory| %>
               <%= link_to advisory_path(advisory.to_param), class: "text-decoration-none" do %>
                 <div class="border rounded p-3 mb-3">
                   <div class="d-flex align-items-start">

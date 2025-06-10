@@ -1,6 +1,6 @@
 class AdvisoriesController < ApplicationController
   def index
-    @scope = Advisory.all
+    @scope = Advisory.not_withdrawn
     
     # Apply filters
     @scope = @scope.by_severity(params[:severity]) if params[:severity].present?
@@ -62,5 +62,24 @@ class AdvisoriesController < ApplicationController
     end
     
     @pagy, @issues = pagy(@issues_scope.order(created_at: :desc))
+  end
+  
+  def feed
+    @advisories = Advisory.not_withdrawn.recent.limit(50)
+    
+    expires_in 1.hour, public: true
+    render 'feed', formats: [:atom]
+  end
+  
+  def issues_feed
+    @advisory = Advisory.find_by(uuid: params[:id]) || Advisory.find_by_identifier(params[:id])
+    raise ActiveRecord::RecordNotFound unless @advisory
+    
+    @issues = @advisory.issues.includes(:repository, :host, packages: [])
+                              .order(created_at: :desc)
+                              .limit(50)
+    
+    expires_in 1.hour, public: true
+    render 'issues_feed', formats: [:atom]
   end
 end

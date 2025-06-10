@@ -19,6 +19,7 @@ class Advisory < ApplicationRecord
   scope :with_issues, -> { joins(:issues).distinct }
   scope :created_after, ->(date) { where('advisories.created_at > ?', date) if date.present? }
   scope :updated_after, ->(date) { where('advisories.updated_at > ?', date) if date.present? }
+  scope :not_withdrawn, -> { where(withdrawn_at: nil) }
 
   def self.find_by_identifier(identifier)
     where("identifiers @> ?", [identifier].to_json).first
@@ -66,6 +67,10 @@ class Advisory < ApplicationRecord
 
   def to_s
     title.presence || primary_identifier || uuid
+  end
+  
+  def withdrawn?
+    withdrawn_at.present?
   end
 
   def repository_urls

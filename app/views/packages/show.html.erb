@@ -61,7 +61,7 @@
       </div>
 
       <!-- Security Advisories -->
-      <% advisories = Advisory.by_package(@package.ecosystem, @package.name) %>
+      <% advisories = Advisory.not_withdrawn.by_package(@package.ecosystem, @package.name) %>
       <% if advisories.any? %>
         <div class="card mb-4">
           <div class="card-header">

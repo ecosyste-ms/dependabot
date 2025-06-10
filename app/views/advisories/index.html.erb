@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:atom, feed_advisories_url, title: "Security Advisories - Dependabot") %>
+<% end %>
+
 <div class="container-sm">
   <div class="row mb-4">
     <div class="col-lg-8">
@@ -7,6 +11,12 @@
       </p>
     </div>
     <div class="col-lg-4">
+      <div class="d-flex gap-2 mb-3">
+        <%= link_to feed_advisories_url, class: "btn btn-outline-secondary btn-sm" do %>
+          <%= octicon "rss", height: 16, class: "me-1" %>
+          RSS Feed
+        <% end %>
+      </div>
       <%= form_with url: advisories_path, method: :get, local: true, class: "d-flex" do |form| %>
         <%= form.text_field :q, placeholder: "Search advisories...", class: "form-control me-2", value: params[:q] %>
         <%= form.submit "Search", class: "btn btn-outline-secondary" %>

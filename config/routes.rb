@@ -97,8 +97,12 @@ Rails.application.routes.draw do
   resources :imports, only: [:index]
   
   resources :advisories, only: [:index, :show] do
+    collection do
+      get 'feed', to: 'advisories#feed'
+    end
     member do
       get 'issues', to: 'advisories#issues'
+      get 'feed', to: 'advisories#issues_feed'
     end
   end
 
