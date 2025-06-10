@@ -511,7 +511,7 @@ class Issue < ApplicationRecord
 
   def update_dependabot_metadata
     metadata = parse_dependabot_metadata
-    if metadata.present?
+    affected_package_ids = if metadata.present?
       update_column(:dependency_metadata, metadata)
       create_package_associations(metadata)
     else
@@ -520,6 +520,9 @@ class Issue < ApplicationRecord
     
     # Also parse and link any security advisories mentioned in the PR
     parse_and_link_advisories
+    
+    # Return the package IDs that were affected
+    affected_package_ids || []
   end
 
   def bot?
