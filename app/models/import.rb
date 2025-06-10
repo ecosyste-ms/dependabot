@@ -457,12 +457,8 @@ class Import < ApplicationRecord
     issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
     issue.assign_attributes(map_github_pr_data(pr_data, repository))
     
-    if issue.closed_at.present?
-      issue.time_to_close = issue.closed_at - issue.created_at
-    end
-    
-    if issue.save
-      issue.update_dependabot_metadata
+    # Use save_issue_with_metadata to handle duplicate constraints
+    if save_issue_with_metadata(issue)
       issue
     else
       nil
