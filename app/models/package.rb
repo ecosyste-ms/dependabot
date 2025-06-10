@@ -172,4 +172,8 @@ class Package < ApplicationRecord
       unique_repositories_count_past_30_days: past_30_days_count
     )
   end
+  
+  def advisories
+    Advisory.by_package(ecosystem, name)
+  end
 end
