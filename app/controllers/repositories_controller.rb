@@ -26,13 +26,13 @@ class RepositoriesController < ApplicationController
     fresh_when(@repository, public: true)
     
     # Get issues for the main content area with optional label filtering
-    scope = @repository.issues.includes(:host)
+    scope = @repository.issues.includes(:host, :advisories, issue_packages: :package)
     
     if params[:label].present?
       scope = scope.with_label(params[:label])
     end
     
-    @pagy, @issues = pagy_countless(scope.order('created_at DESC'))
+    @pagy, @issues = pagy_countless(scope.order('issues.created_at DESC'))
   end
 
   def feed

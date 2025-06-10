@@ -49,23 +49,19 @@ module ApplicationHelper
     end
   end
 
+  def render_markdown(str)
+    return '' unless str.present?
+    
+    # Configure CommonMarker to allow HTML tags needed for collapsible sections
+    Commonmarker.to_html(str, options: {
+      render: { unsafe: true }
+    }).html_safe
+  end
+
   def clean_dependabot_body(body)
     return body unless body
 
-    # Common Dependabot footer patterns to remove
-    patterns = [
-      /---\s*\n\s*\*\*Dependabot commands and options\*\*.*/m,
-      /<details>\s*<summary>Dependabot commands and options<\/summary>.*/m,
-      /\*\*Dependabot commands and options\*\*.*/m,
-      /<details>\s*<summary>Changelog<\/summary>.*/m,
-      /<details>\s*<summary>Commits<\/summary>.*/m
-    ]
-
-    cleaned_body = body
-    patterns.each do |pattern|
-      cleaned_body = cleaned_body.gsub(pattern, '').strip
-    end
-
-    cleaned_body
+    # Temporarily not removing anything for experimentation
+    body
   end
 end

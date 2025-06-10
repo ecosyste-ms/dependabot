@@ -135,7 +135,7 @@
               <% cleaned_body = clean_dependabot_body(@issue.body) %>
               <% if cleaned_body.present? %>
                 <div class="mt-2 p-3 bg-light rounded">
-                  <%= simple_format(cleaned_body) %>
+                  <%= render_markdown(cleaned_body) %>
                 </div>
               <% else %>
                 <div class="mt-2 p-3 bg-light rounded text-muted">
@@ -269,6 +269,49 @@
                   <% end %>
                 </div>
               </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Security Advisories -->
+      <% if @issue.advisories.any? %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <%= octicon "shield-check", class: "me-2" %>
+              Security Advisories
+            </h5>
+          </div>
+          <div class="card-body">
+            <% @issue.advisories.each do |advisory| %>
+              <%= link_to advisory_path(advisory.to_param), class: "text-decoration-none" do %>
+                <div class="border rounded p-3 mb-3">
+                  <div class="d-flex align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1"><%= advisory.title || advisory.primary_identifier %></h6>
+                      
+                      <div class="mb-2">
+                        <% advisory.identifiers.each do |identifier| %>
+                          <span class="badge bg-secondary me-1 small"><%= identifier %></span>
+                        <% end %>
+                        
+                        <% if advisory.severity.present? %>
+                          <span class="<%= advisory.severity_badge_class %> small">
+                            <%= advisory.severity %>
+                          </span>
+                        <% end %>
+                      </div>
+                      
+                      <% if advisory.description.present? %>
+                        <div class="text-muted small">
+                          <%= truncate(advisory.description, length: 200) %>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
             <% end %>
           </div>
         </div>

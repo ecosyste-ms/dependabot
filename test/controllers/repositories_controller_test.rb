@@ -81,4 +81,116 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'link[rel="alternate"][type="application/atom+xml"]'
   end
+  
+  test "should not show duplicate issues when issue has multiple packages" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    
+    # Create an issue
+    issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 1,
+      title: 'Update multiple packages',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-uuid-1',
+      user: 'dependabot[bot]'
+    )
+    
+    # Create multiple packages for the same issue
+    package1 = Package.create!(ecosystem: 'npm', name: 'lodash')
+    package2 = Package.create!(ecosystem: 'npm', name: 'express')
+    
+    IssuePackage.create!(issue: issue, package: package1)
+    IssuePackage.create!(issue: issue, package: package2)
+    
+    get host_repository_path(host, repository)
+    assert_response :success
+    
+    # Check that the issue appears only once, not multiple times
+    issue_cards = css_select("div[id='issue_#{issue.id}']")
+    assert_equal 1, issue_cards.length, "Issue should appear only once, but found #{issue_cards.length} times"
+  end
+  
+  test "should not show duplicate issues when issue has multiple advisories" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    
+    # Create an issue
+    issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 1,
+      title: 'Security update for lodash',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-uuid-1',
+      user: 'dependabot[bot]'
+    )
+    
+    # Create multiple advisories for the same issue
+    advisory1 = Advisory.create!(
+      uuid: 'test-advisory-1',
+      title: 'CVE-2021-23337',
+      identifiers: ['CVE-2021-23337'],
+      severity: 'HIGH'
+    )
+    
+    advisory2 = Advisory.create!(
+      uuid: 'test-advisory-2', 
+      title: 'GHSA-test-1234',
+      identifiers: ['GHSA-test-1234'],
+      severity: 'MEDIUM'
+    )
+    
+    IssueAdvisory.create!(issue: issue, advisory: advisory1)
+    IssueAdvisory.create!(issue: issue, advisory: advisory2)
+    
+    get host_repository_path(host, repository)
+    assert_response :success
+    
+    # Check that the issue appears only once, not multiple times
+    issue_cards = css_select("div[id='issue_#{issue.id}']")
+    assert_equal 1, issue_cards.length, "Issue should appear only once, but found #{issue_cards.length} times"
+  end
+  
+  test "should return distinct issues from query" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    
+    # Create an issue with multiple associated records
+    issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 1,
+      title: 'Complex update',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-uuid-1',
+      user: 'dependabot[bot]'
+    )
+    
+    # Add multiple packages and advisories to simulate real-world complexity
+    2.times do |i|
+      package = Package.create!(ecosystem: 'npm', name: "package-#{i}")
+      IssuePackage.create!(issue: issue, package: package)
+      
+      advisory = Advisory.create!(
+        uuid: "test-advisory-#{i}",
+        title: "CVE-2021-#{i}",
+        identifiers: ["CVE-2021-#{i}"],
+        severity: 'HIGH'
+      )
+      IssueAdvisory.create!(issue: issue, advisory: advisory)
+    end
+    
+    # Test the actual query that the controller uses
+    scope = repository.issues.includes(:host, :advisories, issue_packages: :package)
+    issues_with_includes = scope.order('issues.created_at DESC').to_a
+    
+    # Check that we get exactly one issue, not duplicates
+    assert_equal 1, issues_with_includes.length, "Query should return exactly 1 issue, but got #{issues_with_includes.length}"
+    assert_equal issue.id, issues_with_includes.first.id
+  end
 end

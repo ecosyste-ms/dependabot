@@ -230,7 +230,6 @@ class Import < ApplicationRecord
     return unless pr_data && pr_data['user']
     
     pr_author = pr_data['user']['login']
-    return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
     
     stats[:dependabot_count] += 1
     stats[:pr_count] += 1
@@ -266,7 +265,6 @@ class Import < ApplicationRecord
     return unless issue_data['user']
     
     pr_author = issue_data['user']['login']
-    return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -290,7 +288,6 @@ class Import < ApplicationRecord
   def self.process_review_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
-    return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -314,7 +311,6 @@ class Import < ApplicationRecord
   def self.process_review_comment_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
-    return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -338,7 +334,6 @@ class Import < ApplicationRecord
   def self.process_review_thread_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
-    return unless Issue::DEPENDABOT_USERNAMES.include?(pr_author)
     
     repository = find_or_create_repository(repo_name)
     return unless repository

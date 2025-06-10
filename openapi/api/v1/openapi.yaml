@@ -460,6 +460,112 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Issue'
+  /advisories:
+    get:
+      summary: "List security advisories"
+      operationId: "getAdvisories"
+      parameters:
+        - name: page
+          in: query
+          description: "pagination page number"
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: "Number of records to return"
+          required: false
+          schema:
+            type: integer
+        - name: severity
+          in: query
+          description: "Filter by severity (CRITICAL, HIGH, MODERATE, LOW)"
+          required: false
+          schema:
+            type: string
+            enum: [CRITICAL, HIGH, MODERATE, LOW]
+        - name: ecosystem
+          in: query
+          description: "Filter by ecosystem"
+          required: false
+          schema:
+            type: string
+        - name: package_name
+          in: query
+          description: "Filter by package name (requires ecosystem)"
+          required: false
+          schema:
+            type: string
+        - name: repository_url
+          in: query
+          description: "Filter by repository URL"
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          description: "Search by advisory identifier"
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: "field to order results by (published_at, severity, or issues_count)"
+          required: false
+          schema:
+            type: string
+            enum: [published_at, severity, issues_count]
+        - name: order
+          in: query
+          description: "direction to order results by (asc or desc)"
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  advisories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Advisory'
+  /advisories/{advisoryId}:
+    get:
+      summary: "Get a specific security advisory"
+      operationId: "getAdvisory"
+      parameters:
+        - in: path
+          name: advisoryId
+          schema:
+            type: string
+          required: true
+          description: "advisory UUID or identifier (e.g., CVE-2023-1234 or GHSA-xxxx-xxxx-xxxx)"
+        - name: state
+          in: query
+          description: "Filter related issues by state (open, closed, merged)"
+          required: false
+          schema:
+            type: string
+            enum: [open, closed, merged]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Advisory'
+                  - type: object
+                    properties:
+                      issues:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Issue'
 components:
   schemas:
     Host:
@@ -652,3 +758,92 @@ components:
           type: string
         issue:
           $ref: '#/components/schemas/Issue'
+    Advisory:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: "Unique identifier for the advisory"
+        url:
+          type: string
+          description: "URL to the advisory on GitHub"
+        title:
+          type: string
+          description: "Advisory title"
+        description:
+          type: string
+          description: "Advisory description"
+        origin:
+          type: string
+          description: "Origin of the advisory"
+        severity:
+          type: string
+          enum: [CRITICAL, HIGH, MODERATE, LOW]
+          description: "Severity level"
+        published_at:
+          type: string
+          format: date-time
+          description: "When the advisory was published"
+        withdrawn_at:
+          type: string
+          format: date-time
+          description: "When the advisory was withdrawn (if applicable)"
+        classification:
+          type: string
+          description: "Advisory classification"
+        cvss_score:
+          type: number
+          description: "CVSS score"
+        cvss_vector:
+          type: string
+          description: "CVSS vector string"
+        references:
+          type: array
+          items:
+            type: string
+          description: "Reference URLs"
+        source_kind:
+          type: string
+          description: "Source of the advisory"
+        identifiers:
+          type: array
+          items:
+            type: string
+          description: "Advisory identifiers (CVE, GHSA, etc.)"
+        repository_url:
+          type: string
+          description: "Repository URL associated with the advisory"
+        blast_radius:
+          type: number
+          description: "Blast radius metric"
+        packages:
+          type: array
+          items:
+            type: object
+            properties:
+              ecosystem:
+                type: string
+              package_name:
+                type: string
+              versions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    vulnerable_version_range:
+                      type: string
+                    first_patched_version:
+                      type: string
+          description: "Affected packages"
+        epss_percentage:
+          type: number
+          description: "EPSS percentage"
+        epss_percentile:
+          type: number
+          description: "EPSS percentile"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

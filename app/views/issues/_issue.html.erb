@@ -4,7 +4,7 @@
       <div class="d-flex align-items-start">
         <div class="flex-grow-1 min-width-0 me-3">
           <div class="mb-1">
-            <h5 class="mb-1">#<%= issue.number %> - <%= issue.title %></h5>
+            <h5 class="mb-1 text-break">#<%= issue.number %> - <%= issue.title %></h5>
             <% effective_state = issue.effective_state %>
             <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
               <%= effective_state.capitalize %>
@@ -37,12 +37,22 @@
                 </span>
               <% end %>
             <% end %>
+            <% if issue.advisories.any? %>
+              <span class="text-muted small ms-2">
+                • <span class="text-danger">🔒 Security</span>
+              </span>
+            <% end %>
           </div>
           
-          <% if issue.labels.any? %>
+          <% if issue.labels.any? || issue.advisories.any? %>
             <div class="d-flex flex-wrap gap-1 mb-2">
               <% issue.labels.each do |label| %>
                 <span class="badge bg-light text-dark small"><%= label %></span>
+              <% end %>
+              <% issue.advisories.each do |advisory| %>
+                <span class="<%= advisory.severity_badge_class %> small" title="<%= advisory.title %>">
+                  <%= advisory.primary_identifier %>
+                </span>
               <% end %>
             </div>
           <% end %>

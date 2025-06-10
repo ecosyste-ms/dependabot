@@ -3,6 +3,8 @@ class Issue < ApplicationRecord
   belongs_to :host
   has_many :issue_packages, dependent: :destroy
   has_many :packages, through: :issue_packages
+  has_many :issue_advisories, dependent: :destroy
+  has_many :advisories, through: :issue_advisories
 
   counter_culture :repository, column_name: :issues_count
 
@@ -27,8 +29,6 @@ class Issue < ApplicationRecord
   scope :maintainers, -> { where(author_association: MAINTAINER_ASSOCIATIONS) }
 
   MAINTAINER_ASSOCIATIONS = ["MEMBER", "OWNER", "COLLABORATOR"]
-
-  DEPENDABOT_USERNAMES = ['dependabot[bot]', 'dependabot-preview[bot]'].freeze
   DEPENDABOT_ECOSYSTEMS = {
     # Ruby
     'ruby' => 'rubygems',
@@ -109,11 +109,10 @@ class Issue < ApplicationRecord
     'git-submodules' => 'submodules',
   }
 
-  scope :dependabot, -> { where(user: DEPENDABOT_USERNAMES) }
   scope :with_dependency_metadata, -> { where('length(dependency_metadata::text) > 2') }
   scope :without_dependency_metadata, -> { where(dependency_metadata: nil) }
-  scope :package_name, ->(package_name) { dependabot.with_dependency_metadata.where("dependency_metadata->>'package_name' = ?", package_name) }
-  scope :ecosystem, ->(ecosystem) { dependabot.with_dependency_metadata.where("dependency_metadata->>'ecosystem' = ?", ecosystem) }
+  scope :package_name, ->(package_name) { with_dependency_metadata.where("dependency_metadata->>'package_name' = ?", package_name) }
+  scope :ecosystem, ->(ecosystem) { with_dependency_metadata.where("dependency_metadata->>'ecosystem' = ?", ecosystem) }
   scope :with_label, ->(label) { where("labels @> ARRAY[?]::varchar[]", label) }
 
   def to_param
@@ -125,7 +124,6 @@ class Issue < ApplicationRecord
   end
 
   def parse_dependabot_metadata
-    return unless user.in?(DEPENDABOT_USERNAMES)
     ecosystem = DEPENDABOT_ECOSYSTEMS.keys & labels.map(&:downcase)
     inferred_ecosystem = DEPENDABOT_ECOSYSTEMS[ecosystem.first]
     
@@ -519,6 +517,9 @@ class Issue < ApplicationRecord
     else
       []
     end
+    
+    # Also parse and link any security advisories mentioned in the PR
+    parse_and_link_advisories
   end
 
   def bot?
@@ -742,5 +743,61 @@ class Issue < ApplicationRecord
     end
     
     nil
+  end
+  
+  public
+  
+  def parse_and_link_advisories
+    return unless body.present?
+    
+    advisory_identifiers = extract_advisory_identifiers(body)
+    
+    advisory_identifiers.each do |identifier|
+      advisory = Advisory.find_by_identifier(identifier)
+      
+      if advisory
+        advisories << advisory unless advisories.exists?(advisory.id)
+      end
+    end
+  end
+  
+  def extract_advisory_identifiers(text)
+    self.class.cached_advisory_identifiers.select do |identifier|
+      text.include?(identifier)
+    end
+  end
+  
+  def self.cached_advisory_identifiers
+    @cached_advisory_identifiers ||= Advisory.pluck(:identifiers).flatten.uniq
+  end
+  
+  def self.clear_advisory_identifiers_cache
+    @cached_advisory_identifiers = nil
+  end
+  
+  def security_related?
+    return true if advisories.any?
+    
+    security_keywords = [
+      'security fix',
+      'security update',
+      'vulnerability',
+      'CVE-',
+      'GHSA-',
+      'RUSTSEC-',
+      'security patch'
+    ]
+    
+    return false unless body.present?
+    
+    security_keywords.any? { |keyword| body.downcase.include?(keyword.downcase) }
+  end
+  
+  def advisory_severity
+    severities = advisories.pluck(:severity).compact
+    return nil if severities.empty?
+    
+    severity_order = %w[CRITICAL HIGH MODERATE LOW]
+    severities.min_by { |s| severity_order.index(s.upcase) || 999 }
   end
 end

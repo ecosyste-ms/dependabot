@@ -100,7 +100,7 @@
             <div class="d-flex align-items-start">
               <div class="flex-grow-1 min-width-0 me-3">
                 <div class="mb-1">
-                  <h5 class="mb-1"><%= issue.title %></h5>
+                  <h5 class="mb-1 text-break"><%= issue.title %></h5>
                   <% effective_state = issue.effective_state %>
                   <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
                     <%= effective_state.capitalize %>
@@ -115,7 +115,7 @@
                   <% end %>
                 </div>
                 
-                <div class="text-muted small mb-2">
+                <div class="text-muted small mb-2 text-break">
                   <%= issue.repository.full_name %> #<%= issue.number %>
                 </div>
                 

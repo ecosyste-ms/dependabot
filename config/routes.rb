@@ -29,6 +29,15 @@ Rails.application.routes.draw do
         resources :packages, only: [:index], controller: 'issue_packages'
       end
       
+      resources :advisories, only: [:index, :show] do
+        collection do
+          get 'lookup'
+        end
+        member do
+          get 'issues'
+        end
+      end
+      
       resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
         resources :repositories, constraints: { id: /.*/ }, only: [:index, :show] do
           resources :issues, constraints: { id: /.*/ }, only: [:index, :show]
@@ -86,6 +95,12 @@ Rails.application.routes.draw do
 
   resources :exports, only: [:index], path: 'open-data'
   resources :imports, only: [:index]
+  
+  resources :advisories, only: [:index, :show] do
+    member do
+      get 'issues', to: 'advisories#issues'
+    end
+  end
 
   get '/404', to: 'errors#not_found'
   get '/422', to: 'errors#unprocessable'

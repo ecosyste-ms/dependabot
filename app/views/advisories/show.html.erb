@@ -1,0 +1,350 @@
+<div class="container-sm">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><%= link_to 'Advisories', advisories_path %></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= @advisory.primary_identifier || @advisory.uuid %></li>
+    </ol>
+  </nav>
+  
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Main Advisory Content -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header d-flex align-items-center">
+          <div class="flex-grow-1">
+            <h1 class="h4 mb-0">
+              <%= @advisory.title || @advisory.primary_identifier %>
+            </h1>
+          </div>
+          <div class="flex-shrink-0">
+            <% if @advisory.severity.present? %>
+              <span class="<%= @advisory.severity_badge_class %> fs-6">
+                <%= @advisory.severity %>
+              </span>
+            <% end %>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="mb-3">
+            <% @advisory.identifiers.each do |identifier| %>
+              <span class="badge bg-secondary me-1"><%= identifier %></span>
+            <% end %>
+          </div>
+          
+          <% if @advisory.description.present? %>
+            <div class="mb-3">
+              <strong>Description:</strong>
+              <div class="mt-2 p-3 bg-light rounded">
+                <%= render_markdown(@advisory.description) %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Affected Packages -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Affected Packages</h5>
+        </div>
+        <div class="card-body">
+          <% if @advisory.packages.any? %>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Ecosystem</th>
+                    <th>Package</th>
+                    <th>Vulnerable Versions</th>
+                    <th>Patched Version</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @advisory.packages.each do |pkg| %>
+                    <tr>
+                      <td><span class="badge bg-primary"><%= pkg['ecosystem'] %></span></td>
+                      <td>
+                        <%= link_to show_packages_path(ecosystem: pkg['ecosystem'], name: pkg['package_name']), class: "text-decoration-none" do %>
+                          <code><%= pkg['package_name'] %></code>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if pkg['versions'].present? %>
+                          <% pkg['versions'].each do |version_info| %>
+                            <code class="small"><%= version_info['vulnerable_version_range'] %></code><br>
+                          <% end %>
+                        <% else %>
+                          <span class="text-muted">-</span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if pkg['versions'].present? && pkg['versions'].first['first_patched_version'].present? %>
+                          <code class="small"><%= pkg['versions'].first['first_patched_version'] %></code>
+                        <% else %>
+                          <span class="text-muted small">No patch available</span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <p class="text-muted mb-0">No package information available.</p>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Related PRs -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Related Dependabot Pull Requests</h5>
+          <div class="btn-group btn-group-sm" role="group">
+            <%= link_to 'All', advisory_path(@advisory), 
+                class: "btn btn-outline-secondary #{'active' unless params[:state]}" %>
+            <%= link_to 'Open', advisory_path(@advisory, state: 'open'), 
+                class: "btn btn-outline-secondary #{'active' if params[:state] == 'open'}" %>
+            <%= link_to 'Closed', advisory_path(@advisory, state: 'closed'), 
+                class: "btn btn-outline-secondary #{'active' if params[:state] == 'closed'}" %>
+            <%= link_to 'Merged', advisory_path(@advisory, state: 'merged'), 
+                class: "btn btn-outline-secondary #{'active' if params[:state] == 'merged'}" %>
+          </div>
+        </div>
+        <div class="card-body">
+          <% if @issues.any? %>
+            <% @issues.each do |issue| %>
+              <%= link_to [issue.host, issue.repository, issue], class: "text-decoration-none" do %>
+                <div class="card border-0 shadow-sm package-card mb-3">
+                  <div class="card-body p-4">
+                    <div class="d-flex align-items-start">
+                      <div class="flex-grow-1 min-width-0 me-3">
+                        <div class="mb-1">
+                          <h6 class="mb-1"><%= issue.title %></h6>
+                          <% effective_state = issue.effective_state %>
+                          <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2 small">
+                            <%= effective_state.capitalize %>
+                          </span>
+                          <span class="text-muted small">
+                            <%= time_ago_in_words(issue.created_at) %> ago
+                          </span>
+                        </div>
+                        
+                        <div class="text-muted small mb-2">
+                          <%= issue.repository.full_name %> #<%= issue.number %>
+                        </div>
+                        
+                        <% if issue.packages.any? %>
+                          <div class="d-flex flex-wrap gap-1">
+                            <% issue.packages.first(2).each do |package| %>
+                              <span class="badge bg-light text-dark small">
+                                <%= package.ecosystem %>:<%= package.name %>
+                              </span>
+                            <% end %>
+                            <% if issue.packages.size > 2 %>
+                              <span class="badge bg-secondary small">+<%= issue.packages.size - 2 %> more</span>
+                            <% end %>
+                          </div>
+                        <% end %>
+                      </div>
+                      
+                      <div class="flex-shrink-0">
+                        <img src="<%= issue.repository.avatar_url %>" class="rounded" height='40' width='40' alt="<%= issue.repository.owner %>" onerror="this.src='https://github.com/dependabot.png'">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+            
+            <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+          <% else %>
+            <div class="alert alert-info" role="alert">
+              <h5 class="alert-heading">No Related Pull Requests</h5>
+              <p class="mb-0">No Dependabot pull requests have been found that reference this security advisory.</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <% if @advisory.url.present? %>
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header">
+            <h6 class="mb-0">Actions</h6>
+          </div>
+          <div class="card-body">
+            <%= link_to @advisory.url, target: '_blank', rel: 'noopener', class: "btn btn-primary w-100 mb-2" do %>
+              View on GitHub
+            <% end %>
+            
+            <%= link_to advisories_path, class: "btn btn-outline-secondary w-100" do %>
+              All Advisories
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="mb-0">Advisory Details</h6>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr>
+              <td><strong>Published:</strong></td>
+              <td>
+                <%= @advisory.published_at.strftime('%B %d, %Y') %>
+                <small class="text-muted d-block">
+                  <%= time_ago_in_words(@advisory.published_at) %> ago
+                </small>
+              </td>
+            </tr>
+            
+            <tr>
+              <td><strong>Updated:</strong></td>
+              <td>
+                <%= @advisory.updated_at.strftime('%B %d, %Y') %>
+                <small class="text-muted d-block">
+                  <%= time_ago_in_words(@advisory.updated_at) %> ago
+                </small>
+              </td>
+            </tr>
+            
+            <% if @advisory.cvss_score.present? && @advisory.cvss_score > 0 %>
+              <tr>
+                <td><strong>CVSS Score:</strong></td>
+                <td>
+                  <%= @advisory.cvss_score %>
+                  <% if @advisory.cvss_vector.present? %>
+                    <small class="text-muted d-block">
+                      <%= @advisory.cvss_vector %>
+                    </small>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+            
+            <% if @advisory.epss_percentage.present? %>
+              <tr>
+                <td><strong>EPSS:</strong></td>
+                <td>
+                  <%= number_to_percentage(@advisory.epss_percentage * 100, precision: 2) %>
+                  <small class="text-muted d-block">
+                    <%= (@advisory.epss_percentile * 100).round %>th percentile
+                  </small>
+                </td>
+              </tr>
+            <% end %>
+            
+            <% if @advisory.source_kind.present? %>
+              <tr>
+                <td><strong>Source:</strong></td>
+                <td><%= @advisory.source_kind.humanize %></td>
+              </tr>
+            <% end %>
+            
+            <% if @advisory.classification.present? %>
+              <tr>
+                <td><strong>Classification:</strong></td>
+                <td><%= @advisory.classification %></td>
+              </tr>
+            <% end %>
+            
+            <tr>
+              <td><strong>UUID:</strong></td>
+              <td><code class="text-break small"><%= @advisory.uuid %></code></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <% if @advisory.issues.any? %>
+        <%
+          all_issues = @advisory.issues
+          total_count = all_issues.count
+          open_count = all_issues.where(state: 'open').count
+          merged_count = all_issues.where.not(merged_at: nil).count
+          closed_count = all_issues.where(state: 'closed', merged_at: nil).count
+          
+          # Get update type counts with a single query
+          update_type_counts = IssuePackage.joins(:issue => :issue_advisories)
+                                          .where(issue_advisories: { advisory_id: @advisory.id })
+                                          .group(:update_type)
+                                          .count
+          
+          total_packages = update_type_counts.values.sum
+          major_count = update_type_counts['major'] || 0
+          minor_count = update_type_counts['minor'] || 0
+          patch_count = update_type_counts['patch'] || 0
+        %>
+        
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header">
+            <h6 class="mb-0">PR Statistics</h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <strong>PR Status</strong>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="badge bg-success">Open</span>
+                <span><%= open_count %> (<%= number_to_percentage((open_count.to_f / total_count * 100), precision: 1) %>)</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="badge bg-primary">Merged</span>
+                <span><%= merged_count %> (<%= number_to_percentage((merged_count.to_f / total_count * 100), precision: 1) %>)</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="badge bg-danger">Closed</span>
+                <span><%= closed_count %> (<%= number_to_percentage((closed_count.to_f / total_count * 100), precision: 1) %>)</span>
+              </div>
+            </div>
+            
+            <% if total_packages > 0 %>
+              <div>
+                <strong>Update Types</strong>
+                <% if major_count > 0 %>
+                  <div class="d-flex justify-content-between mb-1">
+                    <span class="badge bg-warning">Major</span>
+                    <span><%= major_count %> (<%= number_to_percentage((major_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                  </div>
+                <% end %>
+                <% if minor_count > 0 %>
+                  <div class="d-flex justify-content-between mb-1">
+                    <span class="badge bg-info">Minor</span>
+                    <span><%= minor_count %> (<%= number_to_percentage((minor_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                  </div>
+                <% end %>
+                <% if patch_count > 0 %>
+                  <div class="d-flex justify-content-between mb-1">
+                    <span class="badge bg-success">Patch</span>
+                    <span><%= patch_count %> (<%= number_to_percentage((patch_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      
+      <% if @advisory.references.any? %>
+        <div class="card border-0 shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">References</h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0">
+              <% @advisory.references.each do |reference| %>
+                <li class="mb-2">
+                  <%= link_to reference, reference, target: '_blank', rel: 'noopener', class: 'text-break small' %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

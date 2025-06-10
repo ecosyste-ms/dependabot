@@ -24,16 +24,16 @@ namespace :packages do
     puts "\nPR created_at population complete!"
   end
   
-  desc "Update dependency metadata for all Dependabot issues"
+  desc "Update dependency metadata for all issues"
   task update_metadata: :environment do
-    puts "Updating dependency metadata for all Dependabot issues..."
+    puts "Updating dependency metadata for all issues..."
     
-    total_count = Issue.dependabot.count
+    total_count = Issue.count
     updated_count = 0
     
-    puts "Found #{total_count} Dependabot issues to process..."
+    puts "Found #{total_count} issues to process..."
     
-    Issue.dependabot.find_each.with_index do |issue, index|
+    Issue.find_each.with_index do |issue, index|
       old_metadata = issue.dependency_metadata
       issue.update_dependabot_metadata
       
@@ -51,8 +51,8 @@ namespace :packages do
     puts "\nDependency metadata update complete!"
     puts "Total issues processed: #{total_count}"
     puts "Issues with updated metadata: #{updated_count}"
-    puts "Issues with new metadata: #{Issue.dependabot.with_dependency_metadata.count}"
-    puts "Issues without metadata: #{Issue.dependabot.without_dependency_metadata.count}"
+    puts "Issues with new metadata: #{Issue.with_dependency_metadata.count}"
+    puts "Issues without metadata: #{Issue.without_dependency_metadata.count}"
   end
   
   desc "Enqueue packages for sync if not synced recently"

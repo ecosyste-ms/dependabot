@@ -10,11 +10,42 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_09_110248) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_10_105603) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
+
+  create_table "advisories", force: :cascade do |t|
+    t.string "uuid", null: false
+    t.string "url"
+    t.string "title"
+    t.text "description"
+    t.string "origin"
+    t.string "severity"
+    t.datetime "published_at"
+    t.datetime "withdrawn_at"
+    t.string "classification"
+    t.float "cvss_score"
+    t.string "cvss_vector"
+    t.jsonb "references", default: []
+    t.string "source_kind"
+    t.jsonb "identifiers", default: []
+    t.string "repository_url"
+    t.float "blast_radius"
+    t.jsonb "packages", default: []
+    t.float "epss_percentage"
+    t.float "epss_percentile"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "issues_count", default: 0, null: false
+    t.index ["identifiers"], name: "index_advisories_on_identifiers", using: :gin
+    t.index ["issues_count"], name: "index_advisories_on_issues_count"
+    t.index ["published_at"], name: "index_advisories_on_published_at"
+    t.index ["repository_url"], name: "index_advisories_on_repository_url"
+    t.index ["severity"], name: "index_advisories_on_severity"
+    t.index ["uuid"], name: "index_advisories_on_uuid", unique: true
+  end
 
   create_table "exports", force: :cascade do |t|
     t.string "date"
@@ -53,6 +84,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_09_110248) do
     t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "issue_advisories", force: :cascade do |t|
+    t.bigint "issue_id", null: false
+    t.bigint "advisory_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["advisory_id"], name: "index_issue_advisories_on_advisory_id"
+    t.index ["created_at"], name: "index_issue_advisories_on_created_at"
+    t.index ["issue_id", "advisory_id"], name: "index_issue_advisories_on_issue_id_and_advisory_id", unique: true
+    t.index ["issue_id"], name: "index_issue_advisories_on_issue_id"
   end
 
   create_table "issue_packages", force: :cascade do |t|
@@ -182,6 +224,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_09_110248) do
     t.index ["owner"], name: "index_repositories_on_owner"
   end
 
+  add_foreign_key "issue_advisories", "advisories"
+  add_foreign_key "issue_advisories", "issues"
   add_foreign_key "issue_packages", "issues"
   add_foreign_key "issue_packages", "packages"
 end

@@ -1,0 +1,158 @@
+<div class="container-sm">
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <h1 class="mb-3">Security Advisories</h1>
+      <p class="text-muted">
+        Browse security advisories and track which Dependabot PRs address them.
+      </p>
+    </div>
+    <div class="col-lg-4">
+      <%= form_with url: advisories_path, method: :get, local: true, class: "d-flex" do |form| %>
+        <%= form.text_field :q, placeholder: "Search advisories...", class: "form-control me-2", value: params[:q] %>
+        <%= form.submit "Search", class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-danger mb-1"><%= number_with_delimiter(@total_count) %></h4>
+          <p class="card-text small text-muted mb-0">Total Advisories</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-primary mb-1"><%= number_with_delimiter(@with_issues_count) %></h4>
+          <p class="card-text small text-muted mb-0">With Dependabot PRs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-warning mb-1"><%= number_with_delimiter(@severity_counts['CRITICAL'] || 0) %></h4>
+          <p class="card-text small text-muted mb-0">Critical Severity</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4 class="card-title text-info mb-1"><%= number_with_delimiter(@severity_counts['HIGH'] || 0) %></h4>
+          <p class="card-text small text-muted mb-0">High Severity</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <%= form_with method: :get, local: true, class: 'row g-3' do |f| %>
+        <div class="col-md-3">
+          <%= f.select :severity, options_for_select([
+            ['All Severities', ''],
+            ['Critical', 'CRITICAL'],
+            ['High', 'HIGH'],
+            ['Moderate', 'MODERATE'],
+            ['Low', 'LOW']
+          ], params[:severity]), {}, class: 'form-select' %>
+        </div>
+        
+        <div class="col-md-3">
+          <%= f.select :ecosystem, options_for_select([['All Ecosystems', '']] + Package::ECOSYSTEM_TO_PURL_TYPE.keys.map{|e| [e.humanize, e]}, params[:ecosystem]), {}, class: 'form-select' %>
+        </div>
+        
+        <div class="col-md-3">
+          <%= f.select :sort, options_for_select([
+            ['Newest First', 'published_at'],
+            ['Severity', 'severity'],
+            ['Most PRs', 'issues_count']
+          ], params[:sort] || 'published_at'), {}, class: 'form-select' %>
+        </div>
+        
+        <div class="col-md-3">
+          <%= f.submit 'Apply Filters', class: 'btn btn-primary' %>
+          <%= link_to 'Clear', advisories_path, class: 'btn btn-outline-secondary' %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @advisories.any? %>
+    <% @advisories.each do |advisory| %>
+      <%= link_to advisory_path(advisory.to_param), class: "text-decoration-none" do %>
+        <div class="card border-0 shadow-sm package-card mb-3">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-start">
+              <div class="flex-grow-1 min-width-0 me-3">
+                <div class="mb-1">
+                  <h5 class="mb-1"><%= advisory.title || advisory.primary_identifier %></h5>
+                  
+                  <% advisory.identifiers.each do |identifier| %>
+                    <span class="badge bg-secondary me-1 small"><%= identifier %></span>
+                  <% end %>
+                  
+                  <% if advisory.severity.present? %>
+                    <span class="<%= advisory.severity_badge_class %> small">
+                      <%= advisory.severity %>
+                    </span>
+                  <% end %>
+                  
+                  <span class="text-muted small ms-2">
+                    <%= time_ago_in_words(advisory.published_at) %> ago
+                  </span>
+                </div>
+                
+                <% if advisory.description.present? %>
+                  <div class="text-muted small mb-2">
+                    <%= truncate(advisory.description, length: 150) %>
+                  </div>
+                <% end %>
+                
+                <% if advisory.ecosystems.any? %>
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    <% advisory.ecosystems.first(3).each do |ecosystem| %>
+                      <span class="badge bg-light text-dark small"><%= ecosystem %></span>
+                    <% end %>
+                    <% if advisory.ecosystems.size > 3 %>
+                      <span class="badge bg-secondary small">+<%= advisory.ecosystems.size - 3 %> more</span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+              
+              <div class="flex-shrink-0 text-end">
+                <% issue_count = advisory.issues_count %>
+                <% if issue_count > 0 %>
+                  <div class="text-primary">
+                    <strong><%= issue_count %></strong>
+                  </div>
+                  <small class="text-muted">Dependabot PRs</small>
+                <% else %>
+                  <small class="text-muted">No PRs yet</small>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+    
+    <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+  <% else %>
+    <div class="alert alert-info" role="alert">
+      <h4 class="alert-heading">No Security Advisories Found</h4>
+      <p>No advisories have been imported yet. The hourly sync task will automatically import recent advisories:</p>
+      <hr>
+      <p class="mb-0">
+        <code>rake advisories:hourly</code>
+      </p>
+    </div>
+  <% end %>
+</div>

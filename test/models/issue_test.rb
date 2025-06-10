@@ -13,6 +13,11 @@ class IssueTest < ActiveSupport::TestCase
       owner: "owner"
     )
   end
+  
+  context 'associations' do
+    should have_many(:issue_advisories).dependent(:destroy)
+    should have_many(:advisories).through(:issue_advisories)
+  end
 
   test "parses standard bump format" do
     issue = create_dependabot_issue("Bump rack from 2.2.16 to 2.2.17")
@@ -500,7 +505,7 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal "actions", metadata[:ecosystem]
   end
 
-  test "returns nil for non-dependabot users" do
+  test "parses metadata for any user since all PRs are from dependabot" do
     issue = Issue.new(
       repository: @repository,
       host: @host,
@@ -511,7 +516,9 @@ class IssueTest < ActiveSupport::TestCase
     )
     
     metadata = issue.parse_dependabot_metadata
-    assert_nil metadata
+    assert_not_nil metadata
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal "rack", metadata[:packages].first[:name]
   end
 
   test "handles package creation errors gracefully" do
@@ -736,5 +743,147 @@ class IssueTest < ActiveSupport::TestCase
       state: "open",
       labels: ["javascript"] # This will map to 'npm' ecosystem
     )
+  end
+  
+  context 'advisory methods' do
+    setup do
+      @issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Bump package from 1.0.0 to 1.0.1",
+        body: "This PR fixes CVE-2023-1234 and GHSA-abcd-efgh-ijkl. It's a security fix.",
+        number: 123,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-advisory"
+      )
+      
+      @advisory1 = Advisory.create!(
+        uuid: 'advisory-1',
+        identifiers: ['CVE-2023-1234'],
+        severity: 'HIGH',
+        title: 'Test vulnerability 1'
+      )
+      
+      @advisory2 = Advisory.create!(
+        uuid: 'advisory-2',
+        identifiers: ['GHSA-abcd-efgh-ijkl'],
+        severity: 'CRITICAL',
+        title: 'Test vulnerability 2'
+      )
+    end
+    
+    should "extract advisory identifiers from body" do
+      identifiers = @issue.extract_advisory_identifiers(@issue.body)
+      
+      assert_includes identifiers, 'CVE-2023-1234'
+      assert_includes identifiers, 'GHSA-abcd-efgh-ijkl'
+      assert_equal 2, identifiers.uniq.size
+    end
+    
+    should "extract various advisory identifier formats" do
+      text = "Fixed CVE-2023-1234, CVE-2023-56789, GHSA-abcd-efgh-ijkl, RUSTSEC-2023-0001"
+      identifiers = @issue.extract_advisory_identifiers(text)
+      
+      # Only identifiers that exist in the database should be returned
+      assert_includes identifiers, 'CVE-2023-1234'
+      assert_includes identifiers, 'GHSA-abcd-efgh-ijkl'
+      # CVE-2023-56789 and RUSTSEC-2023-0001 don't exist in the database, so they shouldn't be included
+      assert_not_includes identifiers, 'CVE-2023-56789'
+      assert_not_includes identifiers, 'RUSTSEC-2023-0001'
+      assert_equal 2, identifiers.uniq.size
+    end
+    
+    should "cache advisory identifiers to avoid repeated database queries" do
+      # Clear any existing cache
+      Issue.clear_advisory_identifiers_cache
+      
+      # First call should hit the database
+      identifiers1 = Issue.cached_advisory_identifiers
+      assert_includes identifiers1, 'CVE-2023-1234'
+      assert_includes identifiers1, 'GHSA-abcd-efgh-ijkl'
+      
+      # Mock Advisory.pluck to verify it's not called again
+      Advisory.expects(:pluck).never
+      
+      # Second call should use cache
+      identifiers2 = Issue.cached_advisory_identifiers
+      assert_equal identifiers1.sort, identifiers2.sort
+      
+      # Cache should be cleared when advisory is updated
+      @advisory1.update!(title: 'Updated title')
+      Advisory.unstub(:pluck)
+      
+      # New identifiers should be loaded after cache clear
+      identifiers3 = Issue.cached_advisory_identifiers
+      assert_equal identifiers1.sort, identifiers3.sort # Same content, but freshly loaded
+    end
+    
+    should "parse and link advisories" do
+      assert_equal 0, @issue.advisories.count
+      
+      @issue.parse_and_link_advisories
+      
+      assert_equal 2, @issue.advisories.count
+      assert_includes @issue.advisories, @advisory1
+      assert_includes @issue.advisories, @advisory2
+    end
+    
+    should "link advisories for any user since all PRs are from dependabot" do
+      @issue.update!(user: 'regular-user')
+      
+      @issue.parse_and_link_advisories
+      
+      assert_equal 2, @issue.advisories.count
+    end
+    
+    should "detect security-related PRs" do
+      assert @issue.security_related?
+      
+      # Also security-related when has advisories
+      @issue.advisories << @advisory1
+      assert @issue.security_related?
+      
+      # Not security-related without keywords or advisories
+      non_security_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Bump package from 1.0.0 to 1.0.1",
+        body: "Regular dependency update",
+        number: 124,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-non-security"
+      )
+      
+      assert_not non_security_issue.security_related?
+    end
+    
+    should "return highest advisory severity" do
+      @issue.advisories << @advisory1  # HIGH
+      @issue.advisories << @advisory2  # CRITICAL
+      
+      assert_equal 'CRITICAL', @issue.advisory_severity
+      
+      # Test with single advisory
+      issue2 = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Another PR",
+        number: 125,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-severity"
+      )
+      issue2.advisories << @advisory1
+      
+      assert_equal 'HIGH', issue2.advisory_severity
+      
+      # Test with no advisories
+      assert_nil Issue.new.advisory_severity
+    end
   end
 end

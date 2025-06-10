@@ -5,6 +5,10 @@
       "schedule": "0 * * * *"
     },
     {
+      "command": "bundle exec rake advisories:hourly",
+      "schedule": "15 * * * *"
+    },
+    {
       "command": "bundle exec rake packages:sync_stale",
       "schedule": "30 * * * *"
     },

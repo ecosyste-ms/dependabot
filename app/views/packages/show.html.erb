@@ -60,6 +60,64 @@
         </div>
       </div>
 
+      <!-- Security Advisories -->
+      <% advisories = Advisory.by_package(@package.ecosystem, @package.name) %>
+      <% if advisories.any? %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <%= octicon "shield-check", class: "me-2" %>
+              Security Advisories
+            </h5>
+          </div>
+          <div class="card-body">
+            <% advisories.limit(5).each do |advisory| %>
+              <%= link_to advisory_path(advisory.to_param), class: "text-decoration-none" do %>
+                <div class="border rounded p-3 mb-3">
+                  <div class="d-flex align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1"><%= advisory.title || advisory.primary_identifier %></h6>
+                      
+                      <div class="mb-2">
+                        <% advisory.identifiers.each do |identifier| %>
+                          <span class="badge bg-secondary me-1 small"><%= identifier %></span>
+                        <% end %>
+                        
+                        <% if advisory.severity.present? %>
+                          <span class="<%= advisory.severity_badge_class %> small">
+                            <%= advisory.severity %>
+                          </span>
+                        <% end %>
+                        
+                        <span class="text-muted small ms-2">
+                          published <%= time_ago_in_words(advisory.published_at) %> ago
+                        </span>
+                        
+                        <span class="text-muted small ms-2">
+                          • updated <%= time_ago_in_words(advisory.updated_at) %> ago
+                        </span>
+                      </div>
+                      
+                      <% if advisory.description.present? %>
+                        <div class="text-muted small">
+                          <%= truncate(advisory.description, length: 150) %>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+            
+            <% if advisories.count > 5 %>
+              <div class="text-center">
+                <%= link_to "View all #{advisories.count} advisories", advisories_path(ecosystem: @package.ecosystem, package: @package.name), class: "btn btn-outline-secondary btn-sm" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
       <div class="card">
         <div class="card-header">
           <div class="d-flex justify-content-between align-items-center">

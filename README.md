@@ -1,8 +1,42 @@
 # [Ecosyste.ms: dependabot](https://dependabot.ecosyste.ms)
 
-An open index of dependabot pull requests across open source projects.
+An open index of Dependabot pull requests and security advisories across open source projects, providing insights into dependency update patterns and security vulnerability management.
 
-This project is part of [Ecosyste.ms](https://ecosyste.ms), Tools and open datasets to support, sustain, and secure critical digital infrastructure.
+## What is this?
+
+This service tracks and analyzes Dependabot pull requests across GitHub repositories, helping package maintainers, security researchers, and developers understand:
+
+- **Dependency Update Patterns**: Which packages are being updated most frequently, what types of updates are common (major, minor, patch), and which repositories are keeping their dependencies current
+- **Security Advisory Coverage**: Which security vulnerabilities are being addressed by Dependabot PRs, tracking the relationship between published advisories (CVEs, GHSAs) and automated dependency updates
+- **Ecosystem Health**: Adoption patterns of dependency management across different programming language ecosystems
+
+## Who is this useful for?
+
+### Package Maintainers
+- **Track downstream adoption**: See which repositories are receiving Dependabot PRs for your packages
+- **Monitor update patterns**: Understand how quickly the community adopts new versions of your packages
+- **Security impact assessment**: Identify which security advisories affect your packages and track remediation
+
+### Security Researchers
+- **Vulnerability landscape**: Analyze how security advisories propagate through the open source ecosystem
+- **Response time analysis**: Study how quickly vulnerabilities are addressed through automated dependency updates
+- **Impact assessment**: Understand the blast radius of security vulnerabilities across projects
+
+### DevOps & Security Teams
+- **Dependency intelligence**: Research packages before adoption by understanding their update frequency and security history
+- **Benchmark practices**: Compare your dependency management practices against similar projects
+- **Supply chain insights**: Track security advisories and their resolution across your technology stack
+
+## Key Features
+
+- **Package Search**: Find packages and explore their Dependabot activity across repositories
+- **Security Advisory Tracking**: Browse security advisories and see which Dependabot PRs address them
+- **Analytics**: View trends in dependency updates, merge rates, and security response times
+- **Cross-references**: Link between packages, repositories, issues, and security advisories
+- **REST API**: Programmatic access to all data for integration with your tools
+- **RSS Feeds**: Subscribe to real-time updates for specific packages, repositories, or global activity
+
+This project is part of [Ecosyste.ms](https://ecosyste.ms), tools and open datasets to support, sustain, and secure critical digital infrastructure.
 
 ## API
 
