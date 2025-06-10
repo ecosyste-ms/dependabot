@@ -6,14 +6,18 @@
     <li class="nav-item">
       <%= link_to "Advisories", advisories_path, class: "nav-link" %>
     </li>
-    <li class="nav-item">
-      <a class="nav-link" href="https://opencollective.com/ecosystems" target="_blank">Support</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="https://github.com/ecosyste-ms/<%= github_repo_name %>" target="_blank">GitHub</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="/docs">API</a>
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        More
+      </a>
+      <ul class="dropdown-menu">
+        <li><%= link_to "About", about_path, class: "dropdown-item" %></li>
+        <li><a class="dropdown-item" href="/docs">API</a></li>
+        <li><%= link_to "Imports", imports_path, class: "dropdown-item" %></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="https://github.com/ecosyste-ms/<%= github_repo_name %>" target="_blank">GitHub</a></li>
+        <li><a class="dropdown-item" href="https://opencollective.com/ecosystems" target="_blank">Support</a></li>
+      </ul>
     </li>
   </ul>
 </nav>

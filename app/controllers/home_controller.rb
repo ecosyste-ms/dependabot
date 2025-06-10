@@ -37,6 +37,10 @@ class HomeController < ApplicationController
     render json: result
   end
 
+  def about
+    expires_in 1.week, public: true
+  end
+
   def feed
     # Get recent issues across all repositories
     @issues = Issue.includes(:repository, :host, issue_packages: :package)

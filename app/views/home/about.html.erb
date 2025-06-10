@@ -1,0 +1,122 @@
+<% @meta_title = "About - Dependabot Pull Request Tracker" %>
+<% @meta_description = "Learn about the Dependabot Pull Request Tracker, a tool for tracking Dependabot pull requests across open source repositories to provide insights for package maintainers." %>
+
+<div class="container-sm">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <h1 class="mb-4">About Dependabot Tracker</h1>
+      
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">What is this?</h3>
+          <p class="card-text">
+            This is a specialized tracking system for Dependabot pull requests across open source repositories. 
+            We collect and analyze Dependabot activity to provide insights for package maintainers about which 
+            repositories are receiving updates for their packages.
+          </p>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">Who is this for?</h3>
+          <ul class="list-unstyled">
+            <li class="mb-2">
+              <strong>📦 Package Maintainers</strong> - See which repositories are updating to your latest versions
+            </li>
+            <li class="mb-2">
+              <strong>🔒 Security Researchers</strong> - Track adoption of security fixes across the ecosystem
+            </li>
+            <li class="mb-2">
+              <strong>🏢 Development Teams</strong> - Monitor dependency update patterns in your ecosystem
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">Data Sources</h3>
+          <p class="card-text">
+            We process data from GitHub's public event stream to track Dependabot pull requests in real-time. 
+            This includes pull request creation, merging, closing, and security advisory information.
+          </p>
+          <p class="card-text">
+            <small class="text-muted">
+              Security advisory data is sourced from 
+              <a href="https://advisories.ecosyste.ms" target="_blank">advisories.ecosyste.ms</a>
+            </small>
+          </p>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">Supported Ecosystems</h3>
+          <div class="row">
+            <div class="col-md-6">
+              <ul class="list-unstyled">
+                <li>📦 npm (JavaScript/Node.js)</li>
+                <li>💎 RubyGems (Ruby)</li>
+                <li>🐍 PyPI (Python)</li>
+                <li>☕ Maven (Java)</li>
+                <li>🎯 Gradle (Java/Kotlin)</li>
+                <li>📦 NuGet (.NET)</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <ul class="list-unstyled">
+                <li>🦀 Cargo (Rust)</li>
+                <li>🐹 Go modules</li>
+                <li>🐘 Packagist (PHP)</li>
+                <li>🐳 Docker</li>
+                <li>⚡ GitHub Actions</li>
+                <li>🔧 And more...</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">API Access</h3>
+          <p class="card-text">
+            All data is available through our REST API. Perfect for integrating dependency update 
+            monitoring into your own tools and dashboards.
+          </p>
+          <div class="d-flex gap-2">
+            <a href="/docs" class="btn btn-outline-primary btn-sm">API Documentation</a>
+            <a href="/open-data" class="btn btn-outline-secondary btn-sm">Open Data Exports</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h3 class="h4 card-title">Open Source</h3>
+          <p class="card-text">
+            This project is part of the <a href="https://ecosyste.ms" target="_blank">Ecosyste.ms</a> 
+            initiative and is open source. Built with Ruby on Rails and available on GitHub.
+          </p>
+          <div class="d-flex gap-2">
+            <a href="https://github.com/ecosyste-ms/dependabot" target="_blank" class="btn btn-outline-dark btn-sm">
+              <%= octicon "mark-github", height: 16, class: "me-1" %>
+              View on GitHub
+            </a>
+            <a href="https://opencollective.com/ecosystems" target="_blank" class="btn btn-outline-success btn-sm">
+              💚 Support the Project
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center text-muted mt-4">
+        <small>
+          Data updated continuously from GitHub's public event stream. 
+          All data is publicly available and respects repository visibility settings.
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
