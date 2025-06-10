@@ -231,6 +231,9 @@ class Import < ApplicationRecord
     
     pr_author = pr_data['user']['login']
     
+    # Only process Dependabot PRs
+    return unless pr_author&.include?('dependabot')
+    
     stats[:dependabot_count] += 1
     stats[:pr_count] += 1
     
@@ -266,6 +269,9 @@ class Import < ApplicationRecord
     
     pr_author = issue_data['user']['login']
     
+    # Only process comments on Dependabot PRs
+    return unless pr_author&.include?('dependabot')
+    
     repository = find_or_create_repository(repo_name)
     return unless repository
     
@@ -288,6 +294,9 @@ class Import < ApplicationRecord
   def self.process_review_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
+    
+    # Only process reviews on Dependabot PRs
+    return unless pr_author&.include?('dependabot')
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -312,6 +321,9 @@ class Import < ApplicationRecord
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
     
+    # Only process review comments on Dependabot PRs
+    return unless pr_author&.include?('dependabot')
+    
     repository = find_or_create_repository(repo_name)
     return unless repository
     
@@ -334,6 +346,9 @@ class Import < ApplicationRecord
   def self.process_review_thread_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     pr_author = pr_data['user']['login']
+    
+    # Only process review threads on Dependabot PRs
+    return unless pr_author&.include?('dependabot')
     
     repository = find_or_create_repository(repo_name)
     return unless repository
