@@ -5,7 +5,7 @@
       "schedule": "0 * * * *"
     },
     {
-      "command": "bundle exec rake advisories:hourly",
+      "command": "bundle exec rake advisories:sync_fast",
       "schedule": "15 * * * *"
     },
     {
