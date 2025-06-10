@@ -1,3 +1,6 @@
+<% @meta_title = "#{@ecosystem.capitalize} Packages - Dependabot Tracker" %>
+<% @meta_description = "Browse #{@ecosystem} packages receiving Dependabot updates. See security patches, version upgrades, and dependency management across the #{@ecosystem} ecosystem." %>
+
 <% content_for :head do %>
   <%= auto_discovery_link_tag(:atom, ecosystem_feed_packages_path(@ecosystem), title: "#{@ecosystem.capitalize} - Dependabot PRs") %>
 <% end %>

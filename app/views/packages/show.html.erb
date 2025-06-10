@@ -1,3 +1,6 @@
+<% @meta_title = "#{@package.ecosystem}/#{@package.name} - Dependabot Updates" %>
+<% @meta_description = "Track Dependabot pull requests for #{@package.name} in the #{@package.ecosystem} ecosystem. See which repositories are updating this package and any security advisories." %>
+
 <% content_for :head do %>
   <%= auto_discovery_link_tag(:atom, feed_packages_url(@package.ecosystem, @package.name), title: "#{@package.ecosystem}/#{@package.name} - Dependabot Updates") %>
 <% end %>

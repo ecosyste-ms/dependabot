@@ -1,3 +1,6 @@
+<% @meta_title = "Security Advisories - Dependabot Tracker" %>
+<% @meta_description = "Browse security advisories tracked by Dependabot. Discover CVEs, GHSA identifiers, and which repositories are receiving security updates." %>
+
 <% content_for :head do %>
   <%= auto_discovery_link_tag(:atom, feed_advisories_url, title: "Security Advisories - Dependabot") %>
 <% end %>

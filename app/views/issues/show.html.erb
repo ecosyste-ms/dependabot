@@ -1,3 +1,6 @@
+<% @meta_title = "#{@repository.full_name}##{@issue.number}: #{@issue.title}" %>
+<% @meta_description = "Dependabot pull request #{@issue.number} for #{@repository.full_name}. #{@issue.packages.any? ? "Updates #{@issue.packages.map(&:name).join(', ')} packages." : "Dependency update for better security and performance."}" %>
+
 <div class="container-sm">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">

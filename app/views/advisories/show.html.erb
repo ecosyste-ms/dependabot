@@ -1,3 +1,6 @@
+<% @meta_title = "#{@advisory.primary_identifier}: #{@advisory.title}" %>
+<% @meta_description = "Security advisory #{@advisory.primary_identifier} with #{@advisory.severity&.downcase || 'unknown'} severity. #{@advisory.issues_count > 0 ? "#{@advisory.issues_count} Dependabot PRs address this vulnerability." : "Track repositories that may be affected."}" %>
+
 <% content_for :head do %>
   <%= auto_discovery_link_tag(:atom, feed_advisory_url(@advisory), title: "#{@advisory.primary_identifier} - Dependabot Pull Requests") %>
 <% end %>

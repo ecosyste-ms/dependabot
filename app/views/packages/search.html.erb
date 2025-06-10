@@ -1,3 +1,6 @@
+<% @meta_title = params[:q].present? ? "Search: #{params[:q]} - Dependabot Tracker" : "Search Packages - Dependabot Tracker" %>
+<% @meta_description = params[:q].present? ? "Search results for '#{params[:q]}' across all package ecosystems. Discover Dependabot activity and security updates for matching packages." : "Search for packages across all ecosystems to see their Dependabot activity. Find packages by name and discover which repositories are updating them." %>
+
 <div class="container-sm">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
