@@ -405,14 +405,25 @@ class Import < ApplicationRecord
       issue.time_to_close = issue.closed_at - issue.created_at
     end
     
-    if issue.save
-      affected_package_ids = issue.update_dependabot_metadata
-      if stats && affected_package_ids.any?
-        stats[:affected_package_ids].merge(affected_package_ids)
+    begin
+      if issue.save
+        affected_package_ids = issue.update_dependabot_metadata
+        if stats && affected_package_ids.any?
+          stats[:affected_package_ids].merge(affected_package_ids)
+        end
+        true
+      else
+        false
       end
-      true
-    else
-      false
+    rescue ActiveRecord::RecordNotUnique, PG::UniqueViolation => e
+      # Handle unique constraint violation on repository_id + number
+      if e.message.include?('index_issues_on_repository_id_and_number_unique')
+        Rails.logger.warn "Duplicate issue found for repository #{issue.repository_id}, number #{issue.number}. UUID: #{issue.uuid}. Skipping."
+        return false
+      else
+        # Re-raise if it's a different constraint violation
+        raise e
+      end
     end
   end
   
