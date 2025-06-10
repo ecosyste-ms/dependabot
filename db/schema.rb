@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_10_105603) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_10_111436) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -148,8 +148,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_10_105603) do
     t.string "closed_by"
     t.index ["created_at"], name: "index_issues_on_created_at"
     t.index ["host_id", "user"], name: "index_issues_on_host_id_and_user"
+    t.index ["repository_id", "number"], name: "index_issues_on_repository_id_and_number_unique", unique: true
     t.index ["repository_id"], name: "index_issues_on_repository_id"
-    t.index ["uuid"], name: "index_issues_on_uuid"
+    t.index ["uuid"], name: "index_issues_on_uuid", unique: true
   end
 
   create_table "jobs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
