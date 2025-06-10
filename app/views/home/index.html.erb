@@ -108,6 +108,12 @@
                   <span class="badge bg-<%= effective_state == 'open' ? 'success' : effective_state == 'merged' ? 'primary' : 'danger' %> me-2">
                     <%= effective_state.capitalize %>
                   </span>
+                  <% if issue.has_security_identifier? %>
+                    <span class="badge bg-warning text-dark me-2" title="Security update - contains CVE/GHSA/RUSTSEC identifiers">
+                      <%= octicon "shield", height: 12, class: "me-1" %>
+                      Security
+                    </span>
+                  <% end %>
                   <span class="text-muted small">
                     <%= time_ago_in_words(issue.created_at) %> ago
                   </span>

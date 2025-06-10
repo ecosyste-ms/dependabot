@@ -61,4 +61,55 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, json_response.length # Open, Merged, Closed
     assert_equal 'Open', json_response.first['name']
   end
+
+  test "homepage shows security indicator for issues with security identifiers" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    
+    # Create a security-related issue
+    security_issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 1,
+      title: 'Security fix for vulnerability',
+      body: 'This PR addresses CVE-2023-1234',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-uuid-security',
+      user: 'dependabot[bot]',
+      created_at: 1.hour.ago
+    )
+    
+    get root_path
+    assert_response :success
+    
+    # Should have security badge and shield icon for security issue
+    assert_select 'span.badge.bg-warning', text: /Security/
+    assert_select 'span.badge.bg-warning svg'
+  end
+
+  test "homepage does not show security indicator for regular issues" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    
+    # Create a regular issue
+    regular_issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 2,
+      title: 'Regular dependency update',
+      body: 'Updates package from 1.0.0 to 1.1.0',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-uuid-regular',
+      user: 'dependabot[bot]',
+      created_at: 1.hour.ago
+    )
+    
+    get root_path
+    assert_response :success
+    
+    # Should not have security badge
+    assert_select 'span.badge.bg-warning', text: /Security/, count: 0
+  end
 end

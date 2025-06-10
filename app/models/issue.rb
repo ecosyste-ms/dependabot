@@ -796,6 +796,13 @@ class Issue < ApplicationRecord
     security_keywords.any? { |keyword| body.downcase.include?(keyword.downcase) }
   end
   
+  def has_security_identifier?
+    return false unless body.present?
+    
+    # Check for CVE, GHSA, and other security advisory identifiers
+    body.match?(/CVE-\d{4}-\d+|GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}|RUSTSEC-\d{4}-\d+/i)
+  end
+  
   def advisory_severity
     severities = advisories.pluck(:severity).compact
     return nil if severities.empty?

@@ -885,5 +885,91 @@ class IssueTest < ActiveSupport::TestCase
       # Test with no advisories
       assert_nil Issue.new.advisory_severity
     end
+    
+    should "detect security identifiers without joins" do
+      # Should detect CVE identifiers
+      cve_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Security fix",
+        body: "This fixes CVE-2023-1234",
+        number: 126,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-cve-fast"
+      )
+      assert cve_issue.has_security_identifier?
+      
+      # Should detect GHSA identifiers
+      ghsa_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Security fix",
+        body: "Addresses GHSA-abcd-efgh-ijkl",
+        number: 127,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-ghsa-fast"
+      )
+      assert ghsa_issue.has_security_identifier?
+      
+      # Should detect RUSTSEC identifiers
+      rustsec_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Security fix",
+        body: "Fixes RUSTSEC-2023-0001",
+        number: 128,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-rustsec-fast"
+      )
+      assert rustsec_issue.has_security_identifier?
+      
+      # Should be case insensitive
+      case_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Security fix",
+        body: "Fixes cve-2023-1234",
+        number: 129,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-case-fast"
+      )
+      assert case_issue.has_security_identifier?
+      
+      # Should return false for non-security PRs
+      regular_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Regular update",
+        body: "Updates package from 1.0 to 2.0",
+        number: 130,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-regular-fast"
+      )
+      assert_not regular_issue.has_security_identifier?
+      
+      # Should return false for empty body
+      empty_body_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Update",
+        body: nil,
+        number: 131,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-empty-fast"
+      )
+      assert_not empty_body_issue.has_security_identifier?
+    end
   end
 end
