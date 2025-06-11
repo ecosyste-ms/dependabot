@@ -305,12 +305,8 @@ class Advisory < ApplicationRecord
   
   def parse_and_link_issues
     return 0 if identifiers.blank?
-    
-    ilike_conditions = identifiers.map { |identifier| "body ILIKE ?" }
-    ilike_values = identifiers.map { |identifier| "%#{identifier}%" }
       
-    Issue.where.not(body: [nil, ''])
-         .where(ilike_conditions.join(' OR '), *ilike_values)
+    Issue.where("body ILIKE ANY(ARRAY[?])", identifiers.map { |id| "%#{id}%" })
          .find_each(&:parse_and_link_advisories)
   end
   
