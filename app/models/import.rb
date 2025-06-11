@@ -145,6 +145,24 @@ class Import < ApplicationRecord
   
   private
   
+  def self.find_or_build_issue_by_uuid(repository, uuid)
+    # Find issue globally by UUID first
+    issue = Issue.find_by(uuid: uuid)
+    
+    if issue
+      # If issue exists but belongs to a different repository, return nil
+      if issue.repository_id != repository.id
+        Rails.logger.warn "Issue UUID #{uuid} already exists for repository #{issue.repository_id}, but event is for repository #{repository.id}. Skipping."
+        return nil
+      end
+      # Return the existing issue for this repository
+      issue
+    else
+      # Build new issue for this repository
+      repository.issues.build(uuid: uuid)
+    end
+  end
+  
   def self.sanitize_string(str)
     return nil if str.nil?
     # Remove null bytes that cause PostgreSQL errors
@@ -240,7 +258,8 @@ class Import < ApplicationRecord
     repository = find_or_create_repository(repo_name)
     return unless repository
     
-    issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
+    issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
+    return unless issue
     
     # Skip if this is an older event
     if issue.persisted? && issue.updated_at && issue.updated_at >= Time.parse(pr_data['updated_at'])
@@ -275,18 +294,18 @@ class Import < ApplicationRecord
     repository = find_or_create_repository(repo_name)
     return unless repository
     
-    existing_issue = repository.issues.find_by(uuid: issue_data['id'])
-    if existing_issue
-      existing_issue.update(comments_count: issue_data['comments'])
+    issue = find_or_build_issue_by_uuid(repository, issue_data['id'])
+    return unless issue
+    
+    if issue.persisted?
+      issue.update(comments_count: issue_data['comments'])
       stats[:comment_count] += 1
     else
-      issue = repository.issues.find_or_initialize_by(uuid: issue_data['id'])
-      was_new = issue.new_record?
       issue.assign_attributes(map_github_pr_data(issue_data, repository))
       
       if save_issue_with_metadata(issue, stats)
-        stats[:created_count] += 1 if was_new
-        stats[:comment_count] += 1 if was_new
+        stats[:created_count] += 1
+        stats[:comment_count] += 1
       end
     end
   end
@@ -301,8 +320,10 @@ class Import < ApplicationRecord
     repository = find_or_create_repository(repo_name)
     return unless repository
     
-    existing_issue = repository.issues.find_by(uuid: pr_data['id'])
-    if existing_issue
+    existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
+    return unless existing_issue
+    
+    if existing_issue.persisted?
       existing_issue.update(
         comments_count: pr_data['comments'] || existing_issue.comments_count,
         updated_at: Time.parse(pr_data['updated_at'])
@@ -327,8 +348,10 @@ class Import < ApplicationRecord
     repository = find_or_create_repository(repo_name)
     return unless repository
     
-    existing_issue = repository.issues.find_by(uuid: pr_data['id'])
-    if existing_issue
+    existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
+    return unless existing_issue
+    
+    if existing_issue.persisted?
       existing_issue.update(
         comments_count: pr_data['comments'] || existing_issue.comments_count,
         updated_at: Time.parse(pr_data['updated_at'])
@@ -353,8 +376,10 @@ class Import < ApplicationRecord
     repository = find_or_create_repository(repo_name)
     return unless repository
     
-    existing_issue = repository.issues.find_by(uuid: pr_data['id'])
-    if existing_issue
+    existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
+    return unless existing_issue
+    
+    if existing_issue.persisted?
       existing_issue.update(updated_at: Time.parse(pr_data['updated_at']))
       stats[:review_thread_count] += 1
     else
@@ -416,9 +441,12 @@ class Import < ApplicationRecord
         false
       end
     rescue ActiveRecord::RecordNotUnique, PG::UniqueViolation => e
-      # Handle unique constraint violation on repository_id + number
+      # Handle unique constraint violations
       if e.message.include?('index_issues_on_repository_id_and_number_unique')
         Rails.logger.warn "Duplicate issue found for repository #{issue.repository_id}, number #{issue.number}. UUID: #{issue.uuid}. Skipping."
+        return false
+      elsif e.message.include?('index_issues_on_uuid')
+        Rails.logger.warn "Duplicate UUID #{issue.uuid} found. This UUID already exists in the database. Skipping."
         return false
       else
         # Re-raise if it's a different constraint violation
@@ -454,7 +482,8 @@ class Import < ApplicationRecord
   end
   
   def self.create_pr_from_data(repository, pr_data)
-    issue = repository.issues.find_or_initialize_by(uuid: pr_data['id'])
+    issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
+    return nil unless issue
     issue.assign_attributes(map_github_pr_data(pr_data, repository))
     
     # Use save_issue_with_metadata to handle duplicate constraints
