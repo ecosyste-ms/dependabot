@@ -303,6 +303,17 @@ class Advisory < ApplicationRecord
     end
   end
   
+  def parse_and_link_issues
+    return 0 if identifiers.blank?
+    
+    ilike_conditions = identifiers.map { |identifier| "body ILIKE ?" }
+    ilike_values = identifiers.map { |identifier| "%#{identifier}%" }
+      
+    Issue.where.not(body: [nil, ''])
+         .where(ilike_conditions.join(' OR '), *ilike_values)
+         .find_each(&:parse_and_link_advisories)
+  end
+  
   def clear_issue_advisory_cache
     Issue.clear_advisory_identifiers_cache
   end
