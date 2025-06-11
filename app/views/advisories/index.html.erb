@@ -66,34 +66,68 @@
   <!-- Filters -->
   <div class="card mb-4">
     <div class="card-body">
-      <%= form_with method: :get, local: true, class: 'row g-3' do |f| %>
+      <div class="row g-3">
         <div class="col-md-3">
-          <%= f.select :severity, options_for_select([
-            ['All Severities', ''],
-            ['Critical', 'CRITICAL'],
-            ['High', 'HIGH'],
-            ['Moderate', 'MODERATE'],
-            ['Low', 'LOW']
-          ], params[:severity]), {}, class: 'form-select' %>
+          <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+              <% if params[:severity].present? %>
+                <%= params[:severity].humanize %> Severity
+              <% else %>
+                All Severities
+              <% end %>
+            </button>
+            <ul class="dropdown-menu w-100">
+              <%= link_to 'All Severities', advisories_path(request.query_parameters.except(:severity)), class: "dropdown-item #{'active' if params[:severity].blank?}" %>
+              <li><hr class="dropdown-divider"></li>
+              <% [['Critical', 'CRITICAL'], ['High', 'HIGH'], ['Moderate', 'MODERATE'], ['Low', 'LOW']].each do |label, value| %>
+                <%= link_to label, advisories_path(request.query_parameters.merge(severity: value)), class: "dropdown-item #{'active' if params[:severity] == value}" %>
+              <% end %>
+            </ul>
+          </div>
         </div>
         
         <div class="col-md-3">
-          <%= f.select :ecosystem, options_for_select([['All Ecosystems', '']] + Package::ECOSYSTEM_TO_PURL_TYPE.keys.map{|e| [e.humanize, e]}, params[:ecosystem]), {}, class: 'form-select' %>
+          <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+              <% if params[:ecosystem].present? %>
+                <%= params[:ecosystem].humanize %>
+              <% else %>
+                All Ecosystems
+              <% end %>
+            </button>
+            <ul class="dropdown-menu w-100">
+              <%= link_to 'All Ecosystems', advisories_path(request.query_parameters.except(:ecosystem)), class: "dropdown-item #{'active' if params[:ecosystem].blank?}" %>
+              <li><hr class="dropdown-divider"></li>
+              <% Package::ECOSYSTEM_TO_PURL_TYPE.keys.each do |ecosystem| %>
+                <%= link_to ecosystem.humanize, advisories_path(request.query_parameters.merge(ecosystem: ecosystem)), class: "dropdown-item #{'active' if params[:ecosystem] == ecosystem}" %>
+              <% end %>
+            </ul>
+          </div>
         </div>
         
         <div class="col-md-3">
-          <%= f.select :sort, options_for_select([
-            ['Newest First', 'published_at'],
-            ['Severity', 'severity'],
-            ['Most PRs', 'issues_count']
-          ], params[:sort] || 'published_at'), {}, class: 'form-select' %>
+          <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+              <% sort_labels = {
+                'published_at' => 'Newest First',
+                'severity' => 'Severity',
+                'issues_count' => 'Most PRs',
+                'merge_rate' => 'Highest Merge Rate'
+              } %>
+              <%= sort_labels[params[:sort]] || 'Newest First' %>
+            </button>
+            <ul class="dropdown-menu w-100">
+              <% sort_labels.each do |value, label| %>
+                <%= link_to label, advisories_path(request.query_parameters.merge(sort: value)), class: "dropdown-item #{'active' if (params[:sort] || 'published_at') == value}" %>
+              <% end %>
+            </ul>
+          </div>
         </div>
         
         <div class="col-md-3">
-          <%= f.submit 'Apply Filters', class: 'btn btn-primary' %>
-          <%= link_to 'Clear', advisories_path, class: 'btn btn-outline-secondary' %>
+          <%= link_to 'Clear All Filters', advisories_path, class: 'btn btn-outline-secondary w-100' %>
         </div>
-      <% end %>
+      </div>
     </div>
   </div>
 
@@ -147,6 +181,12 @@
                     <strong><%= issue_count %></strong>
                   </div>
                   <small class="text-muted">Dependabot PRs</small>
+                  <% if advisory.merge_rate && advisory.merge_rate > 0 %>
+                    <div class="text-success mt-1">
+                      <strong><%= advisory.merge_rate.to_i %>%</strong>
+                    </div>
+                    <small class="text-muted">Merged</small>
+                  <% end %>
                 <% else %>
                   <small class="text-muted">No PRs yet</small>
                 <% end %>

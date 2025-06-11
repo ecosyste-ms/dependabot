@@ -172,8 +172,6 @@ class Advisory < ApplicationRecord
     total_synced
   end
   
-  private
-  
   def self.fetch_advisories_from_api(params)
     begin
       response = Faraday.get("https://advisories.ecosyste.ms/api/v1/advisories", params) do |req|
@@ -282,9 +280,81 @@ class Advisory < ApplicationRecord
     end
   end
   
-  private
+  def calculate_merge_rate
+    return 0.0 if issues_count == 0
+    
+    merged_count = issues.where.not(merged_at: nil).count
+    return 0.0 if merged_count == 0
+    
+    total_prs = issues.count
+    return 0.0 if total_prs == 0
+    
+    (merged_count.to_f / total_prs * 100).round(2)
+  end
+  
+  def update_merge_rate!
+    new_rate = calculate_merge_rate
+    update_column(:merge_rate, new_rate) if merge_rate != new_rate
+  end
+  
+  def self.update_merge_rates_for_advisories_with_issues
+    with_issues.find_each do |advisory|
+      advisory.update_merge_rate!
+    end
+  end
   
   def clear_issue_advisory_cache
     Issue.clear_advisory_identifiers_cache
+  end
+  
+  def pr_status_stats
+    return {} if issues_count == 0
+    
+    total_count = issues.count
+    open_count = issues.where(state: 'open').count
+    merged_count = issues.where.not(merged_at: nil).count
+    closed_count = issues.where(state: 'closed', merged_at: nil).count
+    
+    {
+      total: total_count,
+      open: {
+        count: open_count,
+        percentage: total_count > 0 ? (open_count.to_f / total_count * 100).round(1) : 0.0
+      },
+      merged: {
+        count: merged_count,
+        percentage: total_count > 0 ? (merged_count.to_f / total_count * 100).round(1) : 0.0
+      },
+      closed: {
+        count: closed_count,
+        percentage: total_count > 0 ? (closed_count.to_f / total_count * 100).round(1) : 0.0
+      }
+    }
+  end
+  
+  def update_type_stats
+    update_type_counts = IssuePackage.joins(issue: :issue_advisories)
+                                    .where(issue_advisories: { advisory_id: id })
+                                    .group(:update_type)
+                                    .count
+    
+    total_packages = update_type_counts.values.sum
+    return {} if total_packages == 0
+    
+    {
+      total: total_packages,
+      major: {
+        count: update_type_counts['major'] || 0,
+        percentage: total_packages > 0 ? ((update_type_counts['major'] || 0).to_f / total_packages * 100).round(1) : 0.0
+      },
+      minor: {
+        count: update_type_counts['minor'] || 0,
+        percentage: total_packages > 0 ? ((update_type_counts['minor'] || 0).to_f / total_packages * 100).round(1) : 0.0
+      },
+      patch: {
+        count: update_type_counts['patch'] || 0,
+        percentage: total_packages > 0 ? ((update_type_counts['patch'] || 0).to_f / total_packages * 100).round(1) : 0.0
+      }
+    }
   end
 end

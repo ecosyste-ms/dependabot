@@ -78,6 +78,9 @@ class Import < ApplicationRecord
       # Update package counts for affected packages
       update_package_counts(stats)
       
+      # Update merge rates for advisories with issues
+      Advisory.update_merge_rates_for_advisories_with_issues
+      
       # Record successful import (skip if already exists)
       unless exists?(filename: filename)
         # Extract only the database fields (exclude affected_package_ids Set)

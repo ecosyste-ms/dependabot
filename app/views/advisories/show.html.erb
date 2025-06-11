@@ -277,25 +277,9 @@
         </div>
       </div>
       
-      <% if @advisory.issues.any? %>
-        <%
-          all_issues = @advisory.issues
-          total_count = all_issues.count
-          open_count = all_issues.where(state: 'open').count
-          merged_count = all_issues.where.not(merged_at: nil).count
-          closed_count = all_issues.where(state: 'closed', merged_at: nil).count
-          
-          # Get update type counts with a single query
-          update_type_counts = IssuePackage.joins(:issue => :issue_advisories)
-                                          .where(issue_advisories: { advisory_id: @advisory.id })
-                                          .group(:update_type)
-                                          .count
-          
-          total_packages = update_type_counts.values.sum
-          major_count = update_type_counts['major'] || 0
-          minor_count = update_type_counts['minor'] || 0
-          patch_count = update_type_counts['patch'] || 0
-        %>
+      <% if @advisory.issues_count > 0 %>
+        <% pr_stats = @advisory.pr_status_stats %>
+        <% update_stats = @advisory.update_type_stats %>
         
         <div class="card border-0 shadow-sm mb-4">
           <div class="card-header">
@@ -306,37 +290,37 @@
               <strong>PR Status</strong>
               <div class="d-flex justify-content-between mb-1">
                 <span class="badge bg-success">Open</span>
-                <span><%= open_count %> (<%= number_to_percentage((open_count.to_f / total_count * 100), precision: 1) %>)</span>
+                <span><%= pr_stats[:open][:count] %> (<%= number_to_percentage(pr_stats[:open][:percentage], precision: 1) %>)</span>
               </div>
               <div class="d-flex justify-content-between mb-1">
                 <span class="badge bg-primary">Merged</span>
-                <span><%= merged_count %> (<%= number_to_percentage((merged_count.to_f / total_count * 100), precision: 1) %>)</span>
+                <span><%= pr_stats[:merged][:count] %> (<%= number_to_percentage(pr_stats[:merged][:percentage], precision: 1) %>)</span>
               </div>
               <div class="d-flex justify-content-between mb-1">
                 <span class="badge bg-danger">Closed</span>
-                <span><%= closed_count %> (<%= number_to_percentage((closed_count.to_f / total_count * 100), precision: 1) %>)</span>
+                <span><%= pr_stats[:closed][:count] %> (<%= number_to_percentage(pr_stats[:closed][:percentage], precision: 1) %>)</span>
               </div>
             </div>
             
-            <% if total_packages > 0 %>
+            <% if update_stats[:total] && update_stats[:total] > 0 %>
               <div>
                 <strong>Update Types</strong>
-                <% if major_count > 0 %>
+                <% if update_stats[:major][:count] > 0 %>
                   <div class="d-flex justify-content-between mb-1">
                     <span class="badge bg-warning">Major</span>
-                    <span><%= major_count %> (<%= number_to_percentage((major_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                    <span><%= update_stats[:major][:count] %> (<%= number_to_percentage(update_stats[:major][:percentage], precision: 1) %>)</span>
                   </div>
                 <% end %>
-                <% if minor_count > 0 %>
+                <% if update_stats[:minor][:count] > 0 %>
                   <div class="d-flex justify-content-between mb-1">
                     <span class="badge bg-info">Minor</span>
-                    <span><%= minor_count %> (<%= number_to_percentage((minor_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                    <span><%= update_stats[:minor][:count] %> (<%= number_to_percentage(update_stats[:minor][:percentage], precision: 1) %>)</span>
                   </div>
                 <% end %>
-                <% if patch_count > 0 %>
+                <% if update_stats[:patch][:count] > 0 %>
                   <div class="d-flex justify-content-between mb-1">
                     <span class="badge bg-success">Patch</span>
-                    <span><%= patch_count %> (<%= number_to_percentage((patch_count.to_f / total_packages * 100), precision: 1) %>)</span>
+                    <span><%= update_stats[:patch][:count] %> (<%= number_to_percentage(update_stats[:patch][:percentage], precision: 1) %>)</span>
                   </div>
                 <% end %>
               </div>

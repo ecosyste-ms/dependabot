@@ -31,6 +31,8 @@ class AdvisoriesController < ApplicationController
       @scope = @scope.order(Arel.sql(severity_order))
     when 'issues_count'
       @scope = @scope.order(issues_count: @order)
+    when 'merge_rate'
+      @scope = @scope.order(merge_rate: @order)
     else
       @scope = @scope.order(published_at: :desc)
     end

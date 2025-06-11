@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_10_111436) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_11_145948) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -39,8 +39,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_10_111436) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "issues_count", default: 0, null: false
+    t.decimal "merge_rate", precision: 5, scale: 2, default: "0.0"
     t.index ["identifiers"], name: "index_advisories_on_identifiers", using: :gin
     t.index ["issues_count"], name: "index_advisories_on_issues_count"
+    t.index ["merge_rate"], name: "index_advisories_on_merge_rate"
     t.index ["published_at"], name: "index_advisories_on_published_at"
     t.index ["repository_url"], name: "index_advisories_on_repository_url"
     t.index ["severity"], name: "index_advisories_on_severity"
@@ -94,7 +96,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_10_111436) do
     t.index ["advisory_id"], name: "index_issue_advisories_on_advisory_id"
     t.index ["created_at"], name: "index_issue_advisories_on_created_at"
     t.index ["issue_id", "advisory_id"], name: "index_issue_advisories_on_issue_id_and_advisory_id", unique: true
-    t.index ["issue_id"], name: "index_issue_advisories_on_issue_id"
   end
 
   create_table "issue_packages", force: :cascade do |t|
@@ -149,7 +150,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_10_111436) do
     t.index ["created_at"], name: "index_issues_on_created_at"
     t.index ["host_id", "user"], name: "index_issues_on_host_id_and_user"
     t.index ["repository_id", "number"], name: "index_issues_on_repository_id_and_number_unique", unique: true
-    t.index ["repository_id"], name: "index_issues_on_repository_id"
     t.index ["uuid"], name: "index_issues_on_uuid", unique: true
   end
 
