@@ -18,26 +18,16 @@ namespace :gharchive do
   
   desc "Import past 24 hours of Dependabot PRs from GHArchive"
   task import_24_hours: :environment do
-    puts "Importing past 24 hours of Dependabot PRs..."
-    
     end_time = Time.now.utc
     start_time = 24.hours.ago.utc
     
-    results = Import.import_range(start_time, end_time)
+    Import.import_range(start_time, end_time)
     
-    puts "\n" + "="*50
-    puts "24-Hour Import Summary"
-    puts "="*50
-    puts "Hours processed: #{results[:total_hours]}"
-    puts "Successful: #{results[:successful_imports]}"
-    puts "Failed: #{results[:failed_imports]}"
-    puts "Skipped: #{results[:skipped_imports]}"
-    puts "Success rate: #{(results[:successful_imports].to_f / results[:total_hours] * 100).round(1)}%"
-    puts ""
-    puts "Total events: #{results[:dependabot_count]}"
-    puts "Issues created: #{results[:created_count]}"
-    puts "Issues updated: #{results[:updated_count]}"
-    puts "="*50
+    # Retry any failed imports from the past 24 hours
+    failed_imports = Import.failed_imports_last_24_hours
+    failed_imports.each do |import|
+      import.retry!
+    end
   end
 
   desc "Import all Dependabot PRs from GHArchive for the last 30 days"

@@ -54,6 +54,12 @@ class Import < ApplicationRecord
     exists?(filename: filename)
   end
   
+  def self.failed_imports_last_24_hours
+    where(success: false)
+      .where('imported_at >= ?', 24.hours.ago)
+      .order(imported_at: :desc)
+  end
+  
   def self.import_hour(datetime)
     filename = "#{datetime.year}-#{datetime.month.to_s.rjust(2, '0')}-#{datetime.day.to_s.rjust(2, '0')}-#{datetime.hour}.json.gz"
     
