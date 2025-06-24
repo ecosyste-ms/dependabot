@@ -90,7 +90,7 @@
           <div class="dropdown">
             <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
               <% if params[:ecosystem].present? %>
-                <%= params[:ecosystem].humanize %>
+                <%= params[:ecosystem] %>
               <% else %>
                 All Ecosystems
               <% end %>
@@ -98,8 +98,8 @@
             <ul class="dropdown-menu w-100">
               <%= link_to 'All Ecosystems', advisories_path(request.query_parameters.except(:ecosystem)), class: "dropdown-item #{'active' if params[:ecosystem].blank?}" %>
               <li><hr class="dropdown-divider"></li>
-              <% Package::ECOSYSTEM_TO_PURL_TYPE.keys.each do |ecosystem| %>
-                <%= link_to ecosystem.humanize, advisories_path(request.query_parameters.merge(ecosystem: ecosystem)), class: "dropdown-item #{'active' if params[:ecosystem] == ecosystem}" %>
+              <% Package::ECOSYSTEM_TO_PURL_TYPE.values.uniq.sort.each do |purl_type| %>
+                <%= link_to purl_type, advisories_path(request.query_parameters.merge(ecosystem: purl_type)), class: "dropdown-item #{'active' if params[:ecosystem] == purl_type}" %>
               <% end %>
             </ul>
           </div>
@@ -197,15 +197,11 @@
       <% end %>
     <% end %>
     
-    <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+    <%== pagy_countless_bootstrap_nav(@pagy) %>
   <% else %>
     <div class="alert alert-info" role="alert">
       <h4 class="alert-heading">No Security Advisories Found</h4>
-      <p>No advisories have been imported yet. The hourly sync task will automatically import recent advisories:</p>
-      <hr>
-      <p class="mb-0">
-        <code>rake advisories:hourly</code>
-      </p>
+      <p>No advisories found.</p>
     </div>
   <% end %>
 </div>

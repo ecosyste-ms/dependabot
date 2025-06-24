@@ -37,7 +37,7 @@ class AdvisoriesController < ApplicationController
       @scope = @scope.order(published_at: :desc)
     end
     
-    @pagy, @advisories = pagy(@scope)
+    @pagy, @advisories = pagy_countless(@scope)
     
     # Stats for sidebar
     @severity_counts = Advisory.group(:severity).count
@@ -63,7 +63,7 @@ class AdvisoriesController < ApplicationController
       end
     end
     
-    @pagy, @issues = pagy(@issues_scope.order(created_at: :desc))
+    @pagy, @issues = pagy_countless(@issues_scope.order(created_at: :desc))
   end
   
   def feed

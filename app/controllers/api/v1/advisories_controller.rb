@@ -60,7 +60,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
       end
     end
     
-    @pagy, @issues = pagy(@scope.order(created_at: :desc))
+    @pagy, @issues = pagy_countless(@scope.order(created_at: :desc))
   end
   
   def lookup

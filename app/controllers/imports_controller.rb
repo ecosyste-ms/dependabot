@@ -1,6 +1,6 @@
 class ImportsController < ApplicationController
   def index
-    @pagy, imports = pagy(Import.order("filename DESC"))
+    @pagy, imports = pagy_countless(Import.order("filename DESC"))
     @imports = imports.sort_by { |import| import.filename.scan(/\d+|[^\d]+/).map { |s| s =~ /\d/ ? s.to_i : s } }.reverse
     @recent_stats = {
       total_recent: Import.where('created_at > ?', 24.hours.ago).count,
