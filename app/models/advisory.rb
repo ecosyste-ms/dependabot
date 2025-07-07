@@ -174,10 +174,7 @@ class Advisory < ApplicationRecord
   
   def self.fetch_advisories_from_api(params)
     begin
-      response = Faraday.get("https://advisories.ecosyste.ms/api/v1/advisories", params) do |req|
-        req.headers['Accept'] = 'application/json'
-        req.headers['User-Agent'] = 'Dependabot-Tracker/1.0'
-      end
+      response = Faraday.get("https://advisories.ecosyste.ms/api/v1/advisories", params)
       
       if response.success?
         data = JSON.parse(response.body)

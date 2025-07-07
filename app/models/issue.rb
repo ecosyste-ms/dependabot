@@ -704,16 +704,13 @@ class Issue < ApplicationRecord
   end
   
   def fetch_ecosystem_from_packages_api(repository_url)
-    require 'net/http'
-    require 'json'
-    
     begin
       # URL encode the repository URL parameter
       encoded_url = CGI.escape(repository_url)
-      uri = URI("https://packages.ecosyste.ms/api/v1/packages/lookup?repository_url=#{encoded_url}")
-      response = Net::HTTP.get_response(uri)
       
-      if response.code == '200'
+      response = Faraday.get("https://packages.ecosyste.ms/api/v1/packages/lookup?repository_url=#{encoded_url}")
+      
+      if response.success?
         data = JSON.parse(response.body)
         
         # Create reverse mapping from PURL types to Dependabot ecosystem names
