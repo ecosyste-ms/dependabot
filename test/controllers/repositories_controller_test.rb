@@ -193,4 +193,11 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, issues_with_includes.length, "Query should return exactly 1 issue, but got #{issues_with_includes.length}"
     assert_equal issue.id, issues_with_includes.first.id
   end
+
+  test "should raise RecordNotFound when repository does not exist" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    
+    get host_repository_path(host, 'nonexistent/repo')
+    assert_response :not_found
+  end
 end
