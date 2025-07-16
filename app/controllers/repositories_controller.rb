@@ -23,6 +23,7 @@ class RepositoriesController < ApplicationController
   def show
     @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
+    raise ActiveRecord::RecordNotFound unless @repository
     fresh_when(@repository, public: true)
     
     # Get issues for the main content area with optional label filtering
