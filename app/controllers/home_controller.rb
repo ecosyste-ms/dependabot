@@ -12,9 +12,9 @@ class HomeController < ApplicationController
     @stats = {
       total_prs: Issue.count,
       merged_prs: Issue.where.not(merged_at: nil).count,
+      security_prs: Issue.security_prs.count,
       total_repositories: Repository.where('issues_count > 0').count,
-      total_packages: Package.where('issues_count > 0').count,
-      total_ecosystems: Package.distinct.count(:ecosystem)
+      total_packages: Package.where('issues_count > 0').count
     }
     
     expires_in 1.hour, public: true

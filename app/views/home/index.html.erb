@@ -33,6 +33,14 @@
     <div class="col-md-2">
       <div class="card text-center">
         <div class="card-body">
+          <h4 class="card-title text-warning mb-1"><%= number_with_delimiter(@stats[:security_prs]) %></h4>
+          <p class="card-text small text-muted mb-0">Security PRs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
           <h4 class="card-title text-info mb-1"><%= number_with_delimiter(@stats[:total_repositories]) %></h4>
           <p class="card-text small text-muted mb-0">Repositories</p>
         </div>
@@ -41,16 +49,8 @@
     <div class="col-md-2">
       <div class="card text-center">
         <div class="card-body">
-          <h4 class="card-title text-warning mb-1"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
+          <h4 class="card-title text-secondary mb-1"><%= number_with_delimiter(@stats[:total_packages]) %></h4>
           <p class="card-text small text-muted mb-0">Packages</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card text-center">
-        <div class="card-body">
-          <h4 class="card-title text-secondary mb-1"><%= number_with_delimiter(@stats[:total_ecosystems]) %></h4>
-          <p class="card-text small text-muted mb-0">Ecosystems</p>
         </div>
       </div>
     </div>
