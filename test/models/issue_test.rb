@@ -19,6 +19,140 @@ class IssueTest < ActiveSupport::TestCase
     should have_many(:advisories).through(:issue_advisories)
   end
 
+  context 'scopes' do
+    setup do
+      @issue_with_body = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test issue with body",
+        body: "This is a regular update",
+        number: 200,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-with-body"
+      )
+      
+      @issue_without_body = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test issue without body",
+        body: nil,
+        number: 201,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-without-body"
+      )
+      
+      @issue_empty_body = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test issue with empty body",
+        body: "",
+        number: 202,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-empty-body"
+      )
+      
+      @security_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Security fix",
+        body: "This fixes CVE-2023-1234 vulnerability",
+        number: 203,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-security"
+      )
+      
+      @ghsa_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Another security fix",
+        body: "Addresses GHSA-abcd-efgh-ijkl security issue",
+        number: 204,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-ghsa"
+      )
+      
+      @rustsec_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Rust security fix",
+        body: "Fixes RUSTSEC-2023-0001",
+        number: 205,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-rustsec"
+      )
+    end
+    
+    should "has_body scope filters issues with non-empty body" do
+      issues_with_body = Issue.has_body
+      
+      assert_includes issues_with_body, @issue_with_body
+      assert_includes issues_with_body, @security_issue
+      assert_includes issues_with_body, @ghsa_issue
+      assert_includes issues_with_body, @rustsec_issue
+      
+      assert_not_includes issues_with_body, @issue_without_body
+      assert_not_includes issues_with_body, @issue_empty_body
+    end
+    
+    should "security_prs scope filters issues with security identifiers" do
+      security_prs = Issue.security_prs
+      
+      assert_includes security_prs, @security_issue
+      assert_includes security_prs, @ghsa_issue
+      assert_includes security_prs, @rustsec_issue
+      
+      assert_not_includes security_prs, @issue_with_body
+      assert_not_includes security_prs, @issue_without_body
+      assert_not_includes security_prs, @issue_empty_body
+    end
+    
+    should "security_prs scope works with other scopes" do
+      # Test chaining with other scopes
+      open_security_prs = Issue.security_prs.open
+      
+      assert_includes open_security_prs, @security_issue
+      assert_includes open_security_prs, @ghsa_issue
+      assert_includes open_security_prs, @rustsec_issue
+      
+      # Close one issue and test again
+      @security_issue.update!(state: "closed")
+      open_security_prs = Issue.security_prs.open
+      
+      assert_not_includes open_security_prs, @security_issue
+      assert_includes open_security_prs, @ghsa_issue
+      assert_includes open_security_prs, @rustsec_issue
+    end
+    
+    should "security_prs scope is case insensitive" do
+      lowercase_cve_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Lowercase CVE",
+        body: "Fixes cve-2023-5678",
+        number: 206,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-lowercase-cve"
+      )
+      
+      security_prs = Issue.security_prs
+      assert_includes security_prs, lowercase_cve_issue
+    end
+  end
+
   test "parses standard bump format" do
     issue = create_dependabot_issue("Bump rack from 2.2.16 to 2.2.17")
     metadata = issue.parse_dependabot_metadata

@@ -114,6 +114,8 @@ class Issue < ApplicationRecord
   scope :package_name, ->(package_name) { with_dependency_metadata.where("dependency_metadata->>'package_name' = ?", package_name) }
   scope :ecosystem, ->(ecosystem) { with_dependency_metadata.where("dependency_metadata->>'ecosystem' = ?", ecosystem) }
   scope :with_label, ->(label) { where("labels @> ARRAY[?]::varchar[]", label) }
+  scope :has_body, -> { where.not(body: [nil, '']) }
+  scope :security_prs, -> { has_body.where("body ~* 'CVE-\\d{4}-\\d+|GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}|RUSTSEC-\\d{4}-\\d+'") }
 
   def to_param
     number.to_s
