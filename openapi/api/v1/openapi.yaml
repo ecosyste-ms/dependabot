@@ -421,6 +421,24 @@ paths:
           required: false
           schema:
             type: string
+        - name: pull_request
+          in: query
+          description: "Filter by pull request status (true/false)"
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: "Filter by issue state (open/closed)"
+          required: false
+          schema:
+            type: string
+        - name: security
+          in: query
+          description: "Filter for security-related PRs containing CVE/GHSA/RUSTSEC identifiers (true/false)"
+          required: false
+          schema:
+            type: string
       responses:
         200:
           description: OK
