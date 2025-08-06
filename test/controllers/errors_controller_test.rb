@@ -17,7 +17,7 @@ class ErrorsControllerTest < ActionDispatch::IntegrationTest
 
   test 'renders 422 with proper meta tags' do
     get '/422'
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_template 'errors/unprocessable'
     
     # Check content
