@@ -2,6 +2,10 @@ class HomeController < ApplicationController
   def index
     scope = Issue.includes(:repository, :host, issue_packages: :package)
                  .order(created_at: :desc)
+    
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
+    
     @pagy, @issues = pagy_countless(scope, limit: 50)
     
     # High level stats
@@ -43,9 +47,13 @@ class HomeController < ApplicationController
 
   def feed
     # Get recent issues across all repositories
-    @issues = Issue.includes(:repository, :host, issue_packages: :package)
-                  .order(created_at: :desc)
-                  .limit(100)
+    scope = Issue.includes(:repository, :host, issue_packages: :package)
+                 .order(created_at: :desc)
+    
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
+    
+    @issues = scope.limit(100)
     
     expires_in 1.hour, public: true
     render formats: [:atom]

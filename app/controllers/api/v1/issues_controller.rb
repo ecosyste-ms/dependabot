@@ -10,6 +10,9 @@ class Api::V1::IssuesController < Api::V1::ApplicationController
 
     scope = scope.where(pull_request: params[:pull_request]) if params[:pull_request].present?
     scope = scope.where(state: params[:state]) if params[:state].present?
+    
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
 
     if params[:sort].present? || params[:order].present?
       sort = params[:sort] || 'number'

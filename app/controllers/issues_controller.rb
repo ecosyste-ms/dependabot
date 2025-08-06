@@ -2,8 +2,13 @@ class IssuesController < ApplicationController
   def index
     @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:repository_id].downcase)
-    # TODO filters
-    @pagy, @issues = pagy_countless(@repository.issues.includes(:host).order('number DESC'))
+    
+    scope = @repository.issues
+    
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
+    
+    @pagy, @issues = pagy_countless(scope.includes(:host).order('number DESC'))
     expires_in 1.hour, public: true
   end
 

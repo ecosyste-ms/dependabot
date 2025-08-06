@@ -86,4 +86,51 @@ class IssuesControllerTest < ActionDispatch::IntegrationTest
     # which Rails handles as 404
     assert_response :not_found
   end
+  
+  test "should filter for security PRs when security param is true" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'owner/example-project')
+    
+    # Create a security issue
+    security_issue = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'security-uuid',
+      number: 1,
+      title: 'Security fix',
+      body: 'This fixes CVE-2023-1234',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true
+    )
+    
+    # Create a non-security issue
+    regular_issue = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'regular-uuid',
+      number: 2,
+      title: 'Regular update',
+      body: 'Updates package from 1.0 to 2.0',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true
+    )
+    
+    # Test with security filter
+    get host_repository_issues_path(host, repository, security: 'true')
+    assert_response :success
+    
+    # Should include security issue but not regular issue
+    assert_match security_issue.title, response.body
+    assert_no_match regular_issue.title, response.body
+    
+    # Test without security filter
+    get host_repository_issues_path(host, repository)
+    assert_response :success
+    
+    # Should include both issues
+    assert_match security_issue.title, response.body
+    assert_match regular_issue.title, response.body
+  end
 end

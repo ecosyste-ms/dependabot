@@ -169,6 +169,9 @@ class PackagesController < ApplicationController
                  .includes(:repository, :host, issue_packages: :package)
                  .order('issues.created_at DESC')
     
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
+    
     @pagy, @issues = pagy_countless(scope)
     
     expires_in 1.hour, public: true
@@ -182,6 +185,9 @@ class PackagesController < ApplicationController
                  .where(packages: { ecosystem: @ecosystem })
                  .includes(:repository, :host, issue_packages: :package)
                  .order('issues.created_at DESC')
+    
+    # Apply security filter if requested
+    scope = scope.security_prs if params[:security] == 'true'
     
     @pagy, @issues = pagy_countless(scope, limit: 50)
     

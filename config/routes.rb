@@ -64,7 +64,7 @@ Rails.application.routes.draw do
       #   get 'charts', to: 'repositories#charts'
       #   get 'chart_data', to: 'repositories#chart_data'
       # end
-      resources :issues, constraints: { id: /.*/ }, only: [:show]
+      resources :issues, constraints: { id: /.*/ }, only: [:index, :show]
       member do
         get 'feed', to: 'repositories#feed'
       end
