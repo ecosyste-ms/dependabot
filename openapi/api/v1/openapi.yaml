@@ -735,6 +735,8 @@ components:
           type: string
         url:
           type: string
+        body:
+          type: string
     Package:
       type: object
       properties:
