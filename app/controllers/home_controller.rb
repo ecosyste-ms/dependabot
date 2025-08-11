@@ -8,14 +8,16 @@ class HomeController < ApplicationController
     
     @pagy, @issues = pagy_countless(scope, limit: 50)
     
-    # High level stats
-    @stats = {
-      total_prs: Issue.count,
-      merged_prs: Issue.where.not(merged_at: nil).count,
-      security_prs: Issue.security_prs.count,
-      total_repositories: Repository.where('issues_count > 0').count,
-      total_packages: Package.where('issues_count > 0').count
-    }
+    # High level stats - cache expensive queries
+    @stats = Rails.cache.fetch('homepage_stats', expires_in: 30.minutes) do
+      {
+        total_prs: Issue.count,
+        merged_prs: Issue.where.not(merged_at: nil).count,
+        total_repositories: Repository.where('issues_count > 0').count,
+        total_packages: Package.where('issues_count > 0').count,
+        total_ecosystems: Package.distinct.count(:ecosystem)
+      }
+    end
     
     expires_in 1.hour, public: true
   end
