@@ -61,6 +61,7 @@ class Host < ApplicationRecord
       f.request :json
       f.request :retry
       f.response :json
+      f.headers['X-API-Key'] = ENV['ECOSYSTEMS_API_KEY'] if ENV['ECOSYSTEMS_API_KEY']
     end
     
     response = conn.get('/api/v1/hosts')
