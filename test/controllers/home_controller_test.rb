@@ -25,12 +25,14 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
     package = Package.create!(ecosystem: 'npm', name: 'test-package')
-    
+
     issue = Issue.create!(
       repository: repository,
       host: host,
       number: 1,
       title: 'Global feed test issue',
+      body: 'Test body',
+      node_id: 'test-node-id',
       state: 'open',
       pull_request: true,
       uuid: 'test-uuid-global',
@@ -65,7 +67,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "homepage shows security indicator for issues with security identifiers" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
-    
+
     # Create a security-related issue
     security_issue = Issue.create!(
       repository: repository,
@@ -73,6 +75,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 1,
       title: 'Security fix for vulnerability',
       body: 'This PR addresses CVE-2023-1234',
+      node_id: 'test-node-id-security',
       state: 'open',
       pull_request: true,
       uuid: 'test-uuid-security',
@@ -91,7 +94,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "homepage does not show security indicator for regular issues" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
-    
+
     # Create a regular issue
     regular_issue = Issue.create!(
       repository: repository,
@@ -99,6 +102,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 2,
       title: 'Regular dependency update',
       body: 'Updates package from 1.0.0 to 1.1.0',
+      node_id: 'test-node-id-regular',
       state: 'open',
       pull_request: true,
       uuid: 'test-uuid-regular',
@@ -116,7 +120,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "should filter for security PRs when security param is true" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
-    
+
     # Create a security issue
     security_issue = Issue.create!(
       repository: repository,
@@ -125,12 +129,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 1,
       title: 'Security fix',
       body: 'This fixes CVE-2023-1234',
+      node_id: 'test-node-id-home-security',
       state: 'open',
       user: 'dependabot[bot]',
       pull_request: true,
       created_at: 1.hour.ago
     )
-    
+
     # Create a non-security issue
     regular_issue = Issue.create!(
       repository: repository,
@@ -139,6 +144,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 2,
       title: 'Regular update',
       body: 'Updates package from 1.0 to 2.0',
+      node_id: 'test-node-id-home-regular',
       state: 'open',
       user: 'dependabot[bot]',
       pull_request: true,
@@ -165,7 +171,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "should filter security PRs in atom feed when security param is true" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
-    
+
     # Create a security issue
     security_issue = Issue.create!(
       repository: repository,
@@ -174,12 +180,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 1,
       title: 'Security fix',
       body: 'This fixes GHSA-abcd-efgh-ijkl',
+      node_id: 'test-node-id-feed-security',
       state: 'open',
       user: 'dependabot[bot]',
       pull_request: true,
       created_at: 1.hour.ago
     )
-    
+
     # Create a non-security issue
     regular_issue = Issue.create!(
       repository: repository,
@@ -188,19 +195,107 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       number: 2,
       title: 'Regular update',
       body: 'Updates package from 1.0 to 2.0',
+      node_id: 'test-node-id-feed-regular',
       state: 'open',
       user: 'dependabot[bot]',
       pull_request: true,
       created_at: 2.hours.ago
     )
-    
+
     # Test security filter in feed
     get global_feed_path(security: 'true')
     assert_response :success
     assert_equal 'application/atom+xml', response.content_type.split(';').first
-    
+
     # Should include security issue but not regular issue
     assert_match security_issue.title, response.body
     assert_no_match regular_issue.title, response.body
+  end
+
+  test "should exclude incomplete PRs from homepage" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+
+    # Create a complete PR
+    complete_pr = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'complete-pr-uuid',
+      number: 1,
+      title: 'Complete PR',
+      body: 'This is a complete PR',
+      node_id: 'complete-node-id',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true,
+      created_at: 1.hour.ago
+    )
+
+    # Create an incomplete PR (missing title)
+    incomplete_pr = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'incomplete-pr-uuid',
+      number: 2,
+      title: nil,
+      body: 'This is an incomplete PR',
+      node_id: 'incomplete-node-id',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true,
+      created_at: 30.minutes.ago
+    )
+
+    get root_path
+    assert_response :success
+
+    # Should include complete PR but not incomplete PR
+    assert_match complete_pr.title, response.body
+    assert_select 'h5', text: complete_pr.title
+    # Incomplete PR has no title so can't search for it, but verify count
+    assert_select '.package-card', count: 1
+  end
+
+  test "should exclude incomplete PRs from atom feed" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+
+    # Create a complete PR
+    complete_pr = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'complete-feed-uuid',
+      number: 1,
+      title: 'Complete PR',
+      body: 'This is a complete PR',
+      node_id: 'complete-node-id',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true,
+      created_at: 1.hour.ago
+    )
+
+    # Create an incomplete PR (missing body)
+    incomplete_pr = Issue.create!(
+      repository: repository,
+      host: host,
+      uuid: 'incomplete-feed-uuid',
+      number: 2,
+      title: 'Incomplete PR',
+      body: nil,
+      node_id: 'incomplete-node-id',
+      state: 'open',
+      user: 'dependabot[bot]',
+      pull_request: true,
+      created_at: 30.minutes.ago
+    )
+
+    get global_feed_path
+    assert_response :success
+    assert_equal 'application/atom+xml', response.content_type.split(';').first
+
+    # Should include complete PR but not incomplete PR
+    assert_match complete_pr.title, response.body
+    assert_no_match incomplete_pr.title, response.body
   end
 end

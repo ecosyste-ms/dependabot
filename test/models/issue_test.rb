@@ -1274,6 +1274,110 @@ class IssueTest < ActiveSupport::TestCase
     end
   end
 
+  context 'complete_prs scope' do
+    should "include PRs with all required fields" do
+      complete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Complete PR",
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 310,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-complete-pr"
+      )
+
+      assert_includes Issue.complete_prs, complete_pr
+    end
+
+    should "exclude PRs with missing title" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 311,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-title-complete"
+      )
+
+      assert_not_includes Issue.complete_prs, incomplete_pr
+    end
+
+    should "exclude PRs with missing body" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: nil,
+        node_id: "test-node-id",
+        number: 312,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-body-complete"
+      )
+
+      assert_not_includes Issue.complete_prs, incomplete_pr
+    end
+
+    should "exclude PRs with missing node_id" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: "Test body",
+        node_id: nil,
+        number: 313,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-node-id-complete"
+      )
+
+      assert_not_includes Issue.complete_prs, incomplete_pr
+    end
+
+    should "only include pull requests" do
+      issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 314,
+        state: "open",
+        pull_request: false,
+        uuid: "test-uuid-issue-complete"
+      )
+
+      assert_not_includes Issue.complete_prs, issue
+    end
+
+    should "include non-dependabot PRs that are complete" do
+      complete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "regular-user",
+        title: "Regular PR",
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 315,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-regular-complete"
+      )
+
+      assert_includes Issue.complete_prs, complete_pr
+    end
+  end
+
   context 'enrich_from_github_api' do
     should "enrich incomplete PR with API data" do
       incomplete_pr = Issue.create!(

@@ -121,6 +121,10 @@ class Issue < ApplicationRecord
       .where('"issues"."user" ILIKE ?', '%dependabot%')
       .where("title IS NULL OR body IS NULL OR node_id IS NULL")
   }
+  scope :complete_prs, -> {
+    where(pull_request: true)
+      .where("title IS NOT NULL AND body IS NOT NULL AND node_id IS NOT NULL")
+  }
 
   def to_param
     number.to_s
