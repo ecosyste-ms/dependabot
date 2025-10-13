@@ -126,9 +126,12 @@ class Issue < ApplicationRecord
   end
 
   def parse_dependabot_metadata
+    # Return nil if we don't have enough data to parse
+    return nil if title.blank?
+
     ecosystem = DEPENDABOT_ECOSYSTEMS.keys & labels.map(&:downcase)
     inferred_ecosystem = DEPENDABOT_ECOSYSTEMS[ecosystem.first]
-    
+
     # Try requirement update formats first (before generic "from X to Y" pattern)
     if title.include?(" requirement ")
       # Format: "Update package requirement from X to Y" (handles complex version ranges)

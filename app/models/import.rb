@@ -100,7 +100,7 @@ class Import < ApplicationRecord
       end
       
       { success: true, **stats.except(:affected_package_ids) }
-      
+
     rescue => e
       error_details = "#{e.class}: #{e.message}\n\nBacktrace:\n#{e.backtrace.first(15).join("\n")}"
       Rails.logger.error "Import failed for #{filename}: #{error_details}"
@@ -252,12 +252,16 @@ class Import < ApplicationRecord
     allowed_actions = ['opened', 'closed', 'synchronize', 'reopened', 'edited']
     action = event['payload']['action']
     return unless allowed_actions.include?(action)
-    
+
     pr_data = event['payload']['pull_request']
-    return unless pr_data && pr_data['user']
-    
-    pr_author = pr_data['user']['login']
-    
+    return unless pr_data
+
+    # Check actor field for Dependabot (GHArchive format changed, actor is more reliable)
+    actor = event['actor']
+    return unless actor && actor['login']
+
+    pr_author = actor['login']
+
     # Only process Dependabot PRs
     return unless pr_author&.include?('dependabot')
     
@@ -269,15 +273,20 @@ class Import < ApplicationRecord
     
     issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
     return unless issue
-    
-    # Skip if this is an older event
-    if issue.persisted? && issue.updated_at && issue.updated_at >= Time.parse(pr_data['updated_at'])
-      return
+
+    # Skip if this is an older event (only applicable when we have timestamp data - old format)
+    if issue.persisted? && issue.updated_at && pr_data['updated_at']
+      event_time = Time.parse(pr_data['updated_at'])
+      if issue.updated_at >= event_time
+        return
+      end
     end
-    
+
     was_new = issue.new_record?
-    issue.assign_attributes(map_github_pr_data(pr_data, repository))
-    
+    # Only update if we have new data or it's a new record
+    # For new format with limited data, we still want to create the record
+    issue.assign_attributes(map_github_pr_data(pr_data, repository, pr_author))
+
     if save_issue_with_metadata(issue, stats)
       if was_new
         stats[:created_count] += 1
@@ -290,13 +299,16 @@ class Import < ApplicationRecord
   def self.process_comment_event(event, repo_name, stats)
     payload = event['payload']
     return unless payload && payload['issue']
-    
+
     issue_data = payload['issue']
     return unless issue_data['pull_request']
+
+    # Determine if this is a Dependabot PR
+    # Check if issue_data has user (should be present in both formats for IssueCommentEvent)
     return unless issue_data['user']
-    
+
     pr_author = issue_data['user']['login']
-    
+
     # Only process comments on Dependabot PRs
     return unless pr_author&.include?('dependabot')
     
@@ -321,10 +333,21 @@ class Import < ApplicationRecord
   
   def self.process_review_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
-    pr_author = pr_data['user']['login']
-    
-    # Only process reviews on Dependabot PRs
-    return unless pr_author&.include?('dependabot')
+    return unless pr_data
+
+    # Determine if this is a Dependabot PR
+    # Old format: pr_data has 'user' field
+    # New format: check branch name or existing issue
+    is_dependabot = if pr_data['user']
+      pr_data['user']['login']&.include?('dependabot')
+    elsif pr_data['head'] && pr_data['head']['ref']
+      pr_data['head']['ref']&.include?('dependabot')
+    else
+      existing_issue = Issue.find_by(uuid: pr_data['id'])
+      existing_issue&.user&.include?('dependabot')
+    end
+
+    return unless is_dependabot
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -333,10 +356,10 @@ class Import < ApplicationRecord
     return unless existing_issue
     
     if existing_issue.persisted?
-      existing_issue.update(
-        comments_count: pr_data['comments'] || existing_issue.comments_count,
-        updated_at: Time.parse(pr_data['updated_at'])
-      )
+      update_attrs = {}
+      update_attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
+      update_attrs[:updated_at] = Time.parse(pr_data['updated_at']) if pr_data['updated_at']
+      existing_issue.update(update_attrs) if update_attrs.any?
       stats[:review_count] += 1
     else
       issue = create_pr_from_data(repository, pr_data)
@@ -346,13 +369,24 @@ class Import < ApplicationRecord
       end
     end
   end
-  
+
   def self.process_review_comment_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
-    pr_author = pr_data['user']['login']
-    
-    # Only process review comments on Dependabot PRs
-    return unless pr_author&.include?('dependabot')
+    return unless pr_data
+
+    # Determine if this is a Dependabot PR
+    # Old format: pr_data has 'user' field
+    # New format: check branch name or existing issue
+    is_dependabot = if pr_data['user']
+      pr_data['user']['login']&.include?('dependabot')
+    elsif pr_data['head'] && pr_data['head']['ref']
+      pr_data['head']['ref']&.include?('dependabot')
+    else
+      existing_issue = Issue.find_by(uuid: pr_data['id'])
+      existing_issue&.user&.include?('dependabot')
+    end
+
+    return unless is_dependabot
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -361,10 +395,10 @@ class Import < ApplicationRecord
     return unless existing_issue
     
     if existing_issue.persisted?
-      existing_issue.update(
-        comments_count: pr_data['comments'] || existing_issue.comments_count,
-        updated_at: Time.parse(pr_data['updated_at'])
-      )
+      update_attrs = {}
+      update_attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
+      update_attrs[:updated_at] = Time.parse(pr_data['updated_at']) if pr_data['updated_at']
+      existing_issue.update(update_attrs) if update_attrs.any?
       stats[:review_comment_count] += 1
     else
       issue = create_pr_from_data(repository, pr_data)
@@ -374,13 +408,24 @@ class Import < ApplicationRecord
       end
     end
   end
-  
+
   def self.process_review_thread_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
-    pr_author = pr_data['user']['login']
-    
-    # Only process review threads on Dependabot PRs
-    return unless pr_author&.include?('dependabot')
+    return unless pr_data
+
+    # Determine if this is a Dependabot PR
+    # Old format: pr_data has 'user' field
+    # New format: check branch name or existing issue
+    is_dependabot = if pr_data['user']
+      pr_data['user']['login']&.include?('dependabot')
+    elsif pr_data['head'] && pr_data['head']['ref']
+      pr_data['head']['ref']&.include?('dependabot')
+    else
+      existing_issue = Issue.find_by(uuid: pr_data['id'])
+      existing_issue&.user&.include?('dependabot')
+    end
+
+    return unless is_dependabot
     
     repository = find_or_create_repository(repo_name)
     return unless repository
@@ -389,7 +434,9 @@ class Import < ApplicationRecord
     return unless existing_issue
     
     if existing_issue.persisted?
-      existing_issue.update(updated_at: Time.parse(pr_data['updated_at']))
+      if pr_data['updated_at']
+        existing_issue.update(updated_at: Time.parse(pr_data['updated_at']))
+      end
       stats[:review_thread_count] += 1
     else
       issue = create_pr_from_data(repository, pr_data)
@@ -400,38 +447,46 @@ class Import < ApplicationRecord
     end
   end
   
-  def self.map_github_pr_data(pr_data, repository)
-    {
-      node_id: pr_data['node_id'],
+  def self.map_github_pr_data(pr_data, repository, actor_login = nil)
+    # Support both old format (full data) and new format (minimal data)
+    # Old format has pr_data['user'], new format requires actor_login parameter
+    user_login = pr_data['user'] ? pr_data['user']['login'] : actor_login
+
+    attrs = {
       number: pr_data['number'],
-      title: sanitize_string(pr_data['title']),
-      body: sanitize_string(pr_data['body']),
-      state: pr_data['state'],
-      locked: pr_data['locked'] || false,
-      comments_count: pr_data['comments'] || 0,
-      created_at: Time.parse(pr_data['created_at']),
-      updated_at: Time.parse(pr_data['updated_at']),
-      closed_at: pr_data['closed_at'] ? Time.parse(pr_data['closed_at']) : nil,
-      user: sanitize_string(pr_data['user']['login']),
-      labels: (pr_data['labels'] || []).map { |l| sanitize_string(l['name']) },
-      assignees: (pr_data['assignees'] || []).map { |a| sanitize_string(a['login']) },
+      user: sanitize_string(user_login),
       pull_request: true,
-      author_association: sanitize_string(pr_data['author_association']),
-      state_reason: sanitize_string(pr_data['state_reason']),
-      merged_at: pr_data['merged_at'] ? Time.parse(pr_data['merged_at']) : nil,
-      merged_by: sanitize_string(pr_data['merged_by']&.dig('login')),
-      closed_by: sanitize_string(pr_data['closed_by']&.dig('login')),
-      draft: pr_data['draft'],
-      mergeable: pr_data['mergeable'],
-      mergeable_state: sanitize_string(pr_data['mergeable_state']),
-      rebaseable: pr_data['rebaseable'],
-      review_comments_count: pr_data['review_comments'] || 0,
-      commits_count: pr_data['commits'] || 0,
-      additions: pr_data['additions'] || 0,
-      deletions: pr_data['deletions'] || 0,
-      changed_files: pr_data['changed_files'] || 0,
       host_id: repository.host_id
     }
+
+    # Optional fields that may not be present in new GHArchive format
+    attrs[:node_id] = pr_data['node_id'] if pr_data['node_id']
+    attrs[:title] = sanitize_string(pr_data['title']) if pr_data['title']
+    attrs[:body] = sanitize_string(pr_data['body']) if pr_data['body']
+    attrs[:state] = pr_data['state'] if pr_data['state']
+    attrs[:locked] = pr_data['locked'] if pr_data.key?('locked')
+    attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
+    attrs[:created_at] = Time.parse(pr_data['created_at']) if pr_data['created_at']
+    attrs[:updated_at] = Time.parse(pr_data['updated_at']) if pr_data['updated_at']
+    attrs[:closed_at] = Time.parse(pr_data['closed_at']) if pr_data['closed_at']
+    attrs[:labels] = (pr_data['labels'] || []).map { |l| sanitize_string(l['name']) } if pr_data['labels']
+    attrs[:assignees] = (pr_data['assignees'] || []).map { |a| sanitize_string(a['login']) } if pr_data['assignees']
+    attrs[:author_association] = sanitize_string(pr_data['author_association']) if pr_data['author_association']
+    attrs[:state_reason] = sanitize_string(pr_data['state_reason']) if pr_data['state_reason']
+    attrs[:merged_at] = Time.parse(pr_data['merged_at']) if pr_data['merged_at']
+    attrs[:merged_by] = sanitize_string(pr_data['merged_by']&.dig('login')) if pr_data['merged_by']
+    attrs[:closed_by] = sanitize_string(pr_data['closed_by']&.dig('login')) if pr_data['closed_by']
+    attrs[:draft] = pr_data['draft'] if pr_data.key?('draft')
+    attrs[:mergeable] = pr_data['mergeable'] if pr_data.key?('mergeable')
+    attrs[:mergeable_state] = sanitize_string(pr_data['mergeable_state']) if pr_data['mergeable_state']
+    attrs[:rebaseable] = pr_data['rebaseable'] if pr_data.key?('rebaseable')
+    attrs[:review_comments_count] = pr_data['review_comments'] if pr_data['review_comments']
+    attrs[:commits_count] = pr_data['commits'] if pr_data['commits']
+    attrs[:additions] = pr_data['additions'] if pr_data['additions']
+    attrs[:deletions] = pr_data['deletions'] if pr_data['deletions']
+    attrs[:changed_files] = pr_data['changed_files'] if pr_data['changed_files']
+
+    attrs
   end
   
   def self.save_issue_with_metadata(issue, stats = nil)
