@@ -97,6 +97,37 @@ class ImportTest < ActiveSupport::TestCase
     assert_nil regular_issue
   end
 
+  test "sets default state when state field is missing in degraded format" do
+    # Test degraded GHArchive format where state field is missing
+    test_data = [{
+      "type" => "PullRequestEvent",
+      "repo" => { "name" => "test/repo" },
+      "payload" => {
+        "action" => "opened",
+        "pull_request" => {
+          "id" => 999999,
+          "number" => 99,
+          "head" => { "ref" => "dependabot/npm/package-1.0.0" }
+          # Note: no state field, no user field (degraded format)
+        }
+      }
+    }].map(&:to_json).join("\n")
+
+    initial_issue_count = Issue.count
+    stats = Import.send(:process_gharchive_data, test_data)
+
+    # Should create the issue
+    assert_equal 1, stats[:dependabot_count]
+    assert_equal 1, stats[:created_count]
+    assert_equal initial_issue_count + 1, Issue.count
+
+    # Should have default state of 'open'
+    created_issue = Issue.where(uuid: 999999).first
+    assert_not_nil created_issue
+    assert_equal 'open', created_issue.state
+    assert_equal 'open', created_issue.effective_state
+  end
+
   test "processes different dependabot user variations" do
     # Test different dependabot user formats
     test_data = [

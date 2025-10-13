@@ -153,7 +153,46 @@ class Import < ApplicationRecord
   end
   
   private
-  
+
+  # Determine if PR data represents a Dependabot PR
+  # Supports both old format (full data with user field) and new format (minimal data)
+  def self.is_dependabot_pr?(pr_data)
+    # Strategy 1: Check pr_data['user'] (old/normal format)
+    if pr_data['user'] && pr_data['user']['login']
+      return pr_data['user']['login'].include?('dependabot')
+    end
+
+    # Strategy 2: Check branch name (works in both formats)
+    if pr_data['head'] && pr_data['head']['ref']
+      return pr_data['head']['ref'].include?('dependabot')
+    end
+
+    # Strategy 3: Check existing issue in database
+    existing_issue = Issue.find_by(uuid: pr_data['id'])
+    existing_issue&.user&.include?('dependabot')
+  end
+
+  # Extract PR author from PR data, using multiple strategies
+  def self.extract_pr_author(pr_data, event = nil)
+    # Strategy 1: Check pr_data['user'] (old/normal format)
+    if pr_data['user'] && pr_data['user']['login']
+      return pr_data['user']['login']
+    end
+
+    # Strategy 2: Use 'dependabot[bot]' if we identified by branch
+    if pr_data['head'] && pr_data['head']['ref'] && pr_data['head']['ref'].include?('dependabot')
+      return 'dependabot[bot]'
+    end
+
+    # Strategy 3: Check actor from event
+    if event && event['actor'] && event['actor']['login']
+      actor_login = event['actor']['login']
+      return actor_login if actor_login.include?('dependabot')
+    end
+
+    nil
+  end
+
   def self.find_or_build_issue_by_uuid(repository, uuid)
     # Find issue globally by UUID first
     issue = Issue.find_by(uuid: uuid)
@@ -255,36 +294,25 @@ class Import < ApplicationRecord
 
     pr_data = event['payload']['pull_request']
     return unless pr_data
+    return unless is_dependabot_pr?(pr_data)
 
-    # Check actor field for Dependabot (GHArchive format changed, actor is more reliable)
-    actor = event['actor']
-    return unless actor && actor['login']
-
-    pr_author = actor['login']
-
-    # Only process Dependabot PRs
-    return unless pr_author&.include?('dependabot')
-    
     stats[:dependabot_count] += 1
     stats[:pr_count] += 1
-    
+
     repository = find_or_create_repository(repo_name)
     return unless repository
-    
+
     issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
     return unless issue
 
     # Skip if this is an older event (only applicable when we have timestamp data - old format)
     if issue.persisted? && issue.updated_at && pr_data['updated_at']
       event_time = Time.parse(pr_data['updated_at'])
-      if issue.updated_at >= event_time
-        return
-      end
+      return if issue.updated_at >= event_time
     end
 
     was_new = issue.new_record?
-    # Only update if we have new data or it's a new record
-    # For new format with limited data, we still want to create the record
+    pr_author = extract_pr_author(pr_data, event)
     issue.assign_attributes(map_github_pr_data(pr_data, repository, pr_author))
 
     if save_issue_with_metadata(issue, stats)
@@ -311,19 +339,21 @@ class Import < ApplicationRecord
 
     # Only process comments on Dependabot PRs
     return unless pr_author&.include?('dependabot')
-    
+
+    stats[:dependabot_count] += 1
+
     repository = find_or_create_repository(repo_name)
     return unless repository
-    
+
     issue = find_or_build_issue_by_uuid(repository, issue_data['id'])
     return unless issue
-    
+
     if issue.persisted?
       issue.update(comments_count: issue_data['comments'])
       stats[:comment_count] += 1
     else
       issue.assign_attributes(map_github_pr_data(issue_data, repository))
-      
+
       if save_issue_with_metadata(issue, stats)
         stats[:created_count] += 1
         stats[:comment_count] += 1
@@ -334,27 +364,16 @@ class Import < ApplicationRecord
   def self.process_review_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     return unless pr_data
+    return unless is_dependabot_pr?(pr_data)
 
-    # Determine if this is a Dependabot PR
-    # Old format: pr_data has 'user' field
-    # New format: check branch name or existing issue
-    is_dependabot = if pr_data['user']
-      pr_data['user']['login']&.include?('dependabot')
-    elsif pr_data['head'] && pr_data['head']['ref']
-      pr_data['head']['ref']&.include?('dependabot')
-    else
-      existing_issue = Issue.find_by(uuid: pr_data['id'])
-      existing_issue&.user&.include?('dependabot')
-    end
+    stats[:dependabot_count] += 1
 
-    return unless is_dependabot
-    
     repository = find_or_create_repository(repo_name)
     return unless repository
-    
+
     existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
     return unless existing_issue
-    
+
     if existing_issue.persisted?
       update_attrs = {}
       update_attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
@@ -373,27 +392,16 @@ class Import < ApplicationRecord
   def self.process_review_comment_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     return unless pr_data
+    return unless is_dependabot_pr?(pr_data)
 
-    # Determine if this is a Dependabot PR
-    # Old format: pr_data has 'user' field
-    # New format: check branch name or existing issue
-    is_dependabot = if pr_data['user']
-      pr_data['user']['login']&.include?('dependabot')
-    elsif pr_data['head'] && pr_data['head']['ref']
-      pr_data['head']['ref']&.include?('dependabot')
-    else
-      existing_issue = Issue.find_by(uuid: pr_data['id'])
-      existing_issue&.user&.include?('dependabot')
-    end
+    stats[:dependabot_count] += 1
 
-    return unless is_dependabot
-    
     repository = find_or_create_repository(repo_name)
     return unless repository
-    
+
     existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
     return unless existing_issue
-    
+
     if existing_issue.persisted?
       update_attrs = {}
       update_attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
@@ -412,27 +420,16 @@ class Import < ApplicationRecord
   def self.process_review_thread_event(event, repo_name, stats)
     pr_data = event['payload']['pull_request']
     return unless pr_data
+    return unless is_dependabot_pr?(pr_data)
 
-    # Determine if this is a Dependabot PR
-    # Old format: pr_data has 'user' field
-    # New format: check branch name or existing issue
-    is_dependabot = if pr_data['user']
-      pr_data['user']['login']&.include?('dependabot')
-    elsif pr_data['head'] && pr_data['head']['ref']
-      pr_data['head']['ref']&.include?('dependabot')
-    else
-      existing_issue = Issue.find_by(uuid: pr_data['id'])
-      existing_issue&.user&.include?('dependabot')
-    end
+    stats[:dependabot_count] += 1
 
-    return unless is_dependabot
-    
     repository = find_or_create_repository(repo_name)
     return unless repository
-    
+
     existing_issue = find_or_build_issue_by_uuid(repository, pr_data['id'])
     return unless existing_issue
-    
+
     if existing_issue.persisted?
       if pr_data['updated_at']
         existing_issue.update(updated_at: Time.parse(pr_data['updated_at']))
@@ -463,7 +460,8 @@ class Import < ApplicationRecord
     attrs[:node_id] = pr_data['node_id'] if pr_data['node_id']
     attrs[:title] = sanitize_string(pr_data['title']) if pr_data['title']
     attrs[:body] = sanitize_string(pr_data['body']) if pr_data['body']
-    attrs[:state] = pr_data['state'] if pr_data['state']
+    # Default to 'open' if state is not present (degraded format)
+    attrs[:state] = pr_data['state'] || 'open'
     attrs[:locked] = pr_data['locked'] if pr_data.key?('locked')
     attrs[:comments_count] = pr_data['comments'] if pr_data['comments']
     attrs[:created_at] = Time.parse(pr_data['created_at']) if pr_data['created_at']
