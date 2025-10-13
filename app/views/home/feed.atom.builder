@@ -16,7 +16,7 @@ atom_feed(language: 'en-US') do |feed|
       entry.content type: 'html' do |content|
         content << content_tag(:p, "Repository: #{link_to issue.repository.full_name, host_repository_url(issue.host, issue.repository)}", escape: false)
         content << content_tag(:p, "Host: #{issue.host.name}")
-        content << content_tag(:p, "State: #{issue.state.capitalize}")
+        content << content_tag(:p, "State: #{issue.effective_state.capitalize}")
         content << content_tag(:p, "Created: #{issue.created_at.strftime('%B %d, %Y at %I:%M %p UTC')}")
         content << content_tag(:p, "Author: #{issue.user}")
         

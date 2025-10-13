@@ -24,7 +24,7 @@ atom_feed(language: 'en-US') do |feed|
       entry.title "#{issue.repository.full_name}: #{issue.title}"
       entry.content type: 'html' do |content|
         content << content_tag(:p, "Repository: #{issue.repository.full_name}")
-        content << content_tag(:p, "State: #{issue.state.capitalize}")
+        content << content_tag(:p, "State: #{issue.effective_state.capitalize}")
         content << content_tag(:p, "Update Type: #{issue_package.update_type.humanize}") if issue_package.update_type.present?
         content << content_tag(:p, "Created: #{issue.created_at.strftime('%B %d, %Y')}")
         content << content_tag(:p, "Author: #{issue.user}")

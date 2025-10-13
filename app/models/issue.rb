@@ -536,7 +536,7 @@ class Issue < ApplicationRecord
   
   def effective_state
     return 'merged' if pull_request && merged_at.present?
-    state
+    state || 'open'  # Default to 'open' if state is somehow nil
   end
   
   def merged?

@@ -1106,4 +1106,72 @@ class IssueTest < ActiveSupport::TestCase
       assert_not empty_body_issue.has_security_identifier?
     end
   end
+
+  context 'effective_state method' do
+    should "return state when state is present" do
+      issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test",
+        number: 200,
+        state: "open",
+        pull_request: true,
+        uuid: "test-state-open"
+      )
+
+      assert_equal "open", issue.effective_state
+    end
+
+    should "return 'merged' when PR is merged" do
+      issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test",
+        number: 201,
+        state: "closed",
+        pull_request: true,
+        merged_at: Time.current,
+        uuid: "test-state-merged"
+      )
+
+      assert_equal "merged", issue.effective_state
+    end
+
+    should "return 'open' when state is nil" do
+      issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test",
+        number: 202,
+        state: nil,
+        pull_request: true,
+        uuid: "test-state-nil"
+      )
+
+      # Should default to 'open' instead of crashing
+      assert_equal "open", issue.effective_state
+    end
+
+    should "allow capitalize when state is nil" do
+      issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test",
+        number: 203,
+        state: nil,
+        pull_request: true,
+        uuid: "test-state-capitalize"
+      )
+
+      # This should not raise NoMethodError
+      assert_nothing_raised do
+        result = issue.effective_state.capitalize
+        assert_equal "Open", result
+      end
+    end
+  end
 end
