@@ -116,6 +116,11 @@ class Issue < ApplicationRecord
   scope :with_label, ->(label) { where("labels @> ARRAY[?]::varchar[]", label) }
   scope :has_body, -> { where.not(body: [nil, '']) }
   scope :security_prs, -> { has_body.where("body ~* 'CVE-\\d{4}-\\d+|GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}|RUSTSEC-\\d{4}-\\d+'") }
+  scope :incomplete_prs, -> {
+    where(pull_request: true)
+      .where('"issues"."user" ILIKE ?', '%dependabot%')
+      .where("title IS NULL OR body IS NULL OR node_id IS NULL")
+  }
 
   def to_param
     number.to_s
@@ -808,8 +813,90 @@ class Issue < ApplicationRecord
   def advisory_severity
     severities = advisories.pluck(:severity).compact
     return nil if severities.empty?
-    
+
     severity_order = %w[CRITICAL HIGH MODERATE LOW]
     severities.min_by { |s| severity_order.index(s.upcase) || 999 }
+  end
+
+  def enrich_from_github_api
+    return false unless pull_request && host.name == 'GitHub'
+    return false unless repository
+
+    begin
+      # Use the host's API client to fetch PR details
+      github = host.host_instance
+      api_client = github.send(:api_client)
+
+      # Fetch the full PR details from GitHub API
+      pr_data = api_client.pull_request(repository.full_name, number)
+
+      # Map the PR data to attributes
+      attrs = {}
+      attrs[:node_id] = pr_data.node_id if pr_data.node_id && node_id.blank?
+      attrs[:title] = pr_data.title if pr_data.title && title.blank?
+      attrs[:body] = pr_data.body if pr_data.body && body.blank?
+      attrs[:state] = pr_data.state if pr_data.state
+      attrs[:locked] = pr_data.locked unless locked
+      attrs[:comments_count] = pr_data.comments if pr_data.comments
+      attrs[:labels] = pr_data.labels.map(&:name) if pr_data.labels && labels.blank?
+      attrs[:assignees] = pr_data.assignees.map(&:login) if pr_data.assignees && assignees.blank?
+      attrs[:author_association] = pr_data.author_association if pr_data.author_association
+      attrs[:state_reason] = pr_data.state_reason if pr_data.state_reason
+      attrs[:merged_at] = pr_data.merged_at if pr_data.merged_at
+      attrs[:merged_by] = pr_data.merged_by&.login if pr_data.merged_by
+      attrs[:closed_by] = pr_data.closed_by&.login if pr_data.closed_by
+      attrs[:draft] = pr_data.draft unless draft
+      attrs[:mergeable] = pr_data.mergeable unless mergeable
+      attrs[:mergeable_state] = pr_data.mergeable_state if pr_data.mergeable_state
+      attrs[:rebaseable] = pr_data.rebaseable unless rebaseable
+      attrs[:review_comments_count] = pr_data.review_comments if pr_data.review_comments
+      attrs[:commits_count] = pr_data.commits if pr_data.commits
+      attrs[:additions] = pr_data.additions if pr_data.additions
+      attrs[:deletions] = pr_data.deletions if pr_data.deletions
+      attrs[:changed_files] = pr_data.changed_files if pr_data.changed_files
+
+      # Update the issue with new attributes
+      update!(attrs) if attrs.any?
+
+      # Parse and update metadata
+      update_dependabot_metadata if attrs[:title] || attrs[:body]
+
+      true
+    rescue Octokit::NotFound
+      Rails.logger.warn "PR not found on GitHub: #{repository.full_name}##{number}"
+      false
+    rescue Octokit::Unauthorized, Octokit::Forbidden => e
+      Rails.logger.warn "GitHub API auth error for #{repository.full_name}##{number}: #{e.message}"
+      false
+    rescue => e
+      Rails.logger.error "Failed to enrich PR #{repository.full_name}##{number}: #{e.message}"
+      false
+    end
+  end
+
+  def self.enrich_incomplete_prs(limit: 1000, max_duration: 55.minutes)
+    start_time = Time.current
+    enriched_count = 0
+    failed_count = 0
+
+    incomplete_prs.limit(limit).find_each do |issue|
+      # Check if we've exceeded the time limit
+      if Time.current - start_time >= max_duration
+        Rails.logger.info "Stopping enrichment: reached time limit of #{max_duration / 60} minutes"
+        break
+      end
+
+      if issue.enrich_from_github_api
+        enriched_count += 1
+      else
+        failed_count += 1
+      end
+
+      # Sleep to respect rate limits (5000 requests/hour = 0.72s per request)
+      # Use 0.8s to be conservative and leave headroom
+      sleep 0.8
+    end
+
+    { enriched: enriched_count, failed: failed_count, duration: (Time.current - start_time).to_i }
   end
 end

@@ -2,11 +2,10 @@ require "test_helper"
 
 class IssueTest < ActiveSupport::TestCase
   setup do
-    @host = Host.create!(
-      name: "github.com",
-      url: "https://github.com",
-      kind: "github"
-    )
+    @host = Host.find_or_create_by!(name: "GitHub") do |h|
+      h.url = "https://github.com"
+      h.kind = "github"
+    end
     @repository = Repository.create!(
       host: @host,
       full_name: "owner/repo",
@@ -1172,6 +1171,211 @@ class IssueTest < ActiveSupport::TestCase
         result = issue.effective_state.capitalize
         assert_equal "Open", result
       end
+    end
+  end
+
+  context 'incomplete_prs scope' do
+    should "find PRs with missing title" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 300,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-title"
+      )
+
+      assert_includes Issue.incomplete_prs, incomplete_pr
+    end
+
+    should "find PRs with missing body" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: nil,
+        node_id: "test-node-id",
+        number: 301,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-body"
+      )
+
+      assert_includes Issue.incomplete_prs, incomplete_pr
+    end
+
+    should "find PRs with missing node_id" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: "Test body",
+        node_id: nil,
+        number: 302,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-no-node-id"
+      )
+
+      assert_includes Issue.incomplete_prs, incomplete_pr
+    end
+
+    should "not include complete PRs" do
+      complete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: "Test title",
+        body: "Test body",
+        node_id: "test-node-id",
+        number: 303,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-complete"
+      )
+
+      assert_not_includes Issue.incomplete_prs, complete_pr
+    end
+
+    should "only include dependabot PRs" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "regular-user",
+        title: nil,
+        number: 304,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-regular-user"
+      )
+
+      assert_not_includes Issue.incomplete_prs, incomplete_pr
+    end
+
+    should "only include pull requests" do
+      incomplete_issue = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        number: 305,
+        state: "open",
+        pull_request: false,
+        uuid: "test-uuid-issue"
+      )
+
+      assert_not_includes Issue.incomplete_prs, incomplete_issue
+    end
+  end
+
+  context 'enrich_from_github_api' do
+    should "enrich incomplete PR with API data" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        body: nil,
+        node_id: nil,
+        number: 400,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-enrich"
+      )
+
+      # Mock the Octokit client
+      mock_pr_data = OpenStruct.new(
+        node_id: "PR_node_id_123",
+        title: "Bump rack from 2.2.16 to 2.2.17",
+        body: "Updates rack to fix security vulnerability",
+        state: "open",
+        locked: false,
+        comments: 5,
+        labels: [OpenStruct.new(name: "dependencies")],
+        assignees: [],
+        author_association: "CONTRIBUTOR",
+        state_reason: nil,
+        merged_at: nil,
+        merged_by: nil,
+        closed_by: nil,
+        draft: false,
+        mergeable: true,
+        mergeable_state: "clean",
+        rebaseable: true,
+        review_comments: 0,
+        commits: 1,
+        additions: 2,
+        deletions: 1,
+        changed_files: 1
+      )
+
+      mock_client = mock('octokit_client')
+      mock_client.expects(:pull_request).with(@repository.full_name, 400).returns(mock_pr_data)
+
+      mock_github_instance = mock('github_host_instance')
+      mock_github_instance.stubs(:send).with(:api_client).returns(mock_client)
+
+      incomplete_pr.host.stubs(:host_instance).returns(mock_github_instance)
+
+      assert incomplete_pr.enrich_from_github_api
+
+      incomplete_pr.reload
+      assert_equal "PR_node_id_123", incomplete_pr.node_id
+      assert_equal "Bump rack from 2.2.16 to 2.2.17", incomplete_pr.title
+      assert_equal "Updates rack to fix security vulnerability", incomplete_pr.body
+      assert_equal 5, incomplete_pr.comments_count
+    end
+
+    should "handle API errors gracefully" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        number: 401,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-enrich-error"
+      )
+
+      mock_client = mock('octokit_client')
+      mock_client.expects(:pull_request).raises(Octokit::NotFound)
+
+      mock_github_instance = mock('github_host_instance')
+      mock_github_instance.stubs(:send).with(:api_client).returns(mock_client)
+
+      incomplete_pr.host.stubs(:host_instance).returns(mock_github_instance)
+
+      assert_equal false, incomplete_pr.enrich_from_github_api
+    end
+
+    should "handle unauthorized errors gracefully" do
+      incomplete_pr = Issue.create!(
+        repository: @repository,
+        host: @host,
+        user: "dependabot[bot]",
+        title: nil,
+        number: 402,
+        state: "open",
+        pull_request: true,
+        uuid: "test-uuid-enrich-unauthorized"
+      )
+
+      mock_client = mock('octokit_client')
+      mock_client.expects(:pull_request).raises(Octokit::Unauthorized)
+
+      mock_github_instance = mock('github_host_instance')
+      mock_github_instance.stubs(:send).with(:api_client).returns(mock_client)
+
+      incomplete_pr.host.stubs(:host_instance).returns(mock_github_instance)
+
+      assert_equal false, incomplete_pr.enrich_from_github_api
     end
   end
 end
