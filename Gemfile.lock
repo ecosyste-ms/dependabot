@@ -371,7 +371,7 @@ DEPENDENCIES
   octokit
   ostruct
   packageurl-ruby
-  pagy
+  pagy (~> 9.4.0)
   pg
   pg_query
   pghero
