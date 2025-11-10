@@ -89,7 +89,7 @@ Rails.application.routes.draw do
       get ':ecosystem/feed', to: 'packages#ecosystem_feed', as: :ecosystem_feed, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem', to: 'packages#ecosystem', as: :ecosystem, constraints: { ecosystem: /[^\/]+/ }
       get ':ecosystem/:name/feed', to: 'packages#feed', as: :feed, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
-      get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }
+      get ':ecosystem/:name', to: 'packages#show', as: :show, constraints: { ecosystem: /[^\/]+/, name: /.+/ }, defaults: { format: :html }
     end
   end
 

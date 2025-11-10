@@ -96,7 +96,7 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/repo')
     package = Package.create!(ecosystem: 'npm', name: 'test-package', issues_count: 2)
-    
+
     # Create a security issue
     security_issue = Issue.create!(
       repository: repository,
@@ -110,7 +110,7 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
       pull_request: true,
       created_at: 1.hour.ago
     )
-    
+
     # Create a non-security issue
     regular_issue = Issue.create!(
       repository: repository,
@@ -124,19 +124,52 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
       pull_request: true,
       created_at: 2.hours.ago
     )
-    
+
     # Create issue packages
     IssuePackage.create!(issue: security_issue, package: package, update_type: 'patch')
     IssuePackage.create!(issue: regular_issue, package: package, update_type: 'major')
-    
+
     # Test with security filter in feed
     get ecosystem_feed_packages_path(package.ecosystem, security: 'true')
     assert_response :success
     assert_equal 'application/atom+xml', response.content_type.split(';').first
-    
+
     # Should include security issue but not regular issue
     assert_match security_issue.title, response.body
     assert_no_match regular_issue.title, response.body
+  end
+
+  test "package names ending in .json should work correctly" do
+    # Create a package with a name ending in .json (like org.creekservice.schema.json)
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/repo')
+    package = Package.create!(ecosystem: 'maven', name: 'org.creekservice.schema.json', issues_count: 1)
+
+    # Create an actual issue so the view doesn't error
+    issue = Issue.create!(
+      repository: repository,
+      host: host,
+      number: 1,
+      title: 'Bump org.creekservice.schema.json from 1.0.0 to 2.0.0',
+      state: 'open',
+      pull_request: true,
+      uuid: 'test-json-uuid',
+      user: 'dependabot[bot]'
+    )
+
+    IssuePackage.create!(
+      issue: issue,
+      package: package,
+      update_type: 'major'
+    )
+
+    # Should successfully render HTML page for package
+    get show_packages_path(package.ecosystem, package.name)
+    assert_response :success
+    assert_match package.name, response.body
+
+    # Should default to HTML format, not JSON
+    assert_equal 'text/html', response.content_type.split(';').first
   end
 
 end
