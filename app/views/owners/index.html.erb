@@ -16,15 +16,6 @@
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" aria-current="page" href="<%= host_authors_path(@host) %>">
-        Authors
-        
-          <!--<span class="badge bg-secondary rounded-pill">
-             TODO cache authors count onto host 
-             </span>-->
-      </a>
-    </li>
-    <li class="nav-item">
       <a class="nav-link active" aria-current="page">
         Owners
         <span class="badge bg-secondary rounded-pill">
@@ -32,7 +23,6 @@
         </span>
       </a>
     </li>
-    
   </ul>
 
   <%= render collection: @owners, partial: 'owners/owner' %>

@@ -35,20 +35,16 @@ end
 json.issue_authors @issue_authors do |author, count|
   json.author author
   json.count count
-  json.url api_v1_host_author_url(@host, author)
 end
 json.pull_request_authors @pull_request_authors do |author, count|
   json.author author
   json.count count
-  json.url api_v1_host_author_url(@host, author)
 end
 json.maintainers @maintainers do |maintainer, count|
   json.maintainer maintainer
   json.count count
-  json.url api_v1_host_author_url(@host, maintainer)
 end
 json.active_maintainers @active_maintainers do |maintainer, count|
   json.maintainer maintainer
   json.count count
-  json.url api_v1_host_author_url(@host, maintainer)
 end
