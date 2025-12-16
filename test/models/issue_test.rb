@@ -628,7 +628,7 @@ class IssueTest < ActiveSupport::TestCase
       labels: [] # No ecosystem labels to test path-based inference
     )
     metadata = issue.parse_dependabot_metadata
-    
+
     assert_equal "Bump", metadata[:prefix]
     assert_equal 1, metadata[:packages].length
     assert_equal "actions/setup-node", metadata[:packages][0][:name]
@@ -636,6 +636,34 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal "4", metadata[:packages][0][:new_version]
     assert_equal "/.github/workflows", metadata[:path]
     assert_equal "actions", metadata[:ecosystem]
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS maps bun to npm" do
+    assert_equal 'npm', Issue::DEPENDABOT_ECOSYSTEMS['bun']
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS maps docker-compose to docker" do
+    assert_equal 'docker', Issue::DEPENDABOT_ECOSYSTEMS['docker-compose']
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS maps dotnet-sdk to nuget" do
+    assert_equal 'nuget', Issue::DEPENDABOT_ECOSYSTEMS['dotnet-sdk']
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS maps opentofu to terraform" do
+    assert_equal 'terraform', Issue::DEPENDABOT_ECOSYSTEMS['opentofu']
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS includes new ecosystems" do
+    assert_equal 'bazel', Issue::DEPENDABOT_ECOSYSTEMS['bazel']
+    assert_equal 'devcontainers', Issue::DEPENDABOT_ECOSYSTEMS['devcontainers']
+    assert_equal 'julia', Issue::DEPENDABOT_ECOSYSTEMS['julia']
+    assert_equal 'vcpkg', Issue::DEPENDABOT_ECOSYSTEMS['vcpkg']
+    assert_equal 'rust-toolchain', Issue::DEPENDABOT_ECOSYSTEMS['rust-toolchain']
+  end
+
+  test "DEPENDABOT_ECOSYSTEMS maps gitsubmodule to submodules" do
+    assert_equal 'submodules', Issue::DEPENDABOT_ECOSYSTEMS['gitsubmodule']
   end
 
   test "parses metadata for any user since all PRs are from dependabot" do

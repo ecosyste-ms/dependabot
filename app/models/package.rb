@@ -49,7 +49,11 @@ class Package < ApplicationRecord
     'carthage' => 'carthage',
     'conda' => 'conda',
     'helm' => 'helm',
-    'kubernetes' => 'k8s'
+    'kubernetes' => 'k8s',
+    'bazel' => 'bazel',
+    'julia' => 'julia'
+    # Note: devcontainers, vcpkg, rust-toolchain, submodules have no official PURL type
+    # They fall back to ecosystem name via purl_type method
   }.freeze
   
   def to_s

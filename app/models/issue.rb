@@ -40,6 +40,7 @@ class Issue < ApplicationRecord
     'npm' => 'npm',
     'yarn' => 'npm',
     'pnpm' => 'npm',
+    'bun' => 'npm',
     
     # Python
     'python' => 'pip',
@@ -59,6 +60,7 @@ class Issue < ApplicationRecord
     '.net' => 'nuget',
     'nuget' => 'nuget',
     'dotnet' => 'nuget',
+    'dotnet-sdk' => 'nuget',
     
     # Go
     'go' => 'go',
@@ -77,6 +79,7 @@ class Issue < ApplicationRecord
     # Docker
     'docker' => 'docker',
     'dockerfile' => 'docker',
+    'docker-compose' => 'docker',
     
     # GitHub Actions
     'github_actions' => 'actions',
@@ -85,8 +88,10 @@ class Issue < ApplicationRecord
     
     # Infrastructure
     'terraform' => 'terraform',
+    'opentofu' => 'terraform',
     'helm' => 'helm',
     'kubernetes' => 'kubernetes',
+    'devcontainers' => 'devcontainers',
     
     # Other languages
     'elixir' => 'hex',
@@ -107,6 +112,19 @@ class Issue < ApplicationRecord
     'submodules' => 'submodules',
     'submodule' => 'submodules',
     'git-submodules' => 'submodules',
+    'gitsubmodule' => 'submodules',
+
+    # Build tools
+    'bazel' => 'bazel',
+
+    # C/C++
+    'vcpkg' => 'vcpkg',
+
+    # Julia
+    'julia' => 'julia',
+
+    # Rust toolchain
+    'rust-toolchain' => 'rust-toolchain',
   }
 
   scope :with_dependency_metadata, -> { where('length(dependency_metadata::text) > 2') }
