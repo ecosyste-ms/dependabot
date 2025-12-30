@@ -121,8 +121,6 @@ module Hosts
       case host_type.try(:downcase)
       when 'github'
         'GitHub'
-      when 'gitlab'
-        'GitLab'
       when 'bitbucket'
         'Bitbucket'
       end

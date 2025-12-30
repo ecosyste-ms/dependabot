@@ -39,7 +39,6 @@ gem "chartkick"
 gem "groupdate"
 gem 'google-protobuf'
 gem 'octokit'
-gem "gitlab"
 gem "redis"
 gem "postgresql_cursor"
 gem 'ostruct'
