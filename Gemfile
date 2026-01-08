@@ -23,7 +23,6 @@ gem "faraday-retry"
 gem "faraday-follow_redirects"
 gem "pagy", "~> 9.4.0"
 gem "pghero"
-gem "pg_query"
 gem 'bootstrap'
 gem 'rack-cors'
 gem 'rswag-api'
@@ -37,7 +36,6 @@ gem 'addressable'
 gem 'appsignal'
 gem "chartkick"
 gem "groupdate"
-gem 'google-protobuf'
 gem 'octokit'
 gem "redis"
 gem "postgresql_cursor"
@@ -60,6 +58,7 @@ group :test do
   gem "webmock"
   gem "mocha"
   gem "rails-controller-testing"
+  gem "minitest", "~> 5"
 end
 
 gem "bootstrap-icons", require: "bootstrap_icons"
