@@ -288,7 +288,7 @@ class Import < ApplicationRecord
   end
   
   def self.process_pr_event(event, repo_name, stats)
-    allowed_actions = ['opened', 'closed', 'synchronize', 'reopened', 'edited']
+    allowed_actions = ['opened', 'closed', 'merged', 'synchronize', 'reopened', 'edited']
     action = event['payload']['action']
     return unless allowed_actions.include?(action)
 
