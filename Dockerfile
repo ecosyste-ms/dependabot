@@ -16,9 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libyaml-dev \
     libcurl4-openssl-dev \
     libjemalloc2 \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf $(find /usr/lib -name 'libjemalloc.so.2' -print -quit) /usr/local/lib/libjemalloc.so.2
 
-ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+ENV LD_PRELOAD=/usr/local/lib/libjemalloc.so.2
 ENV RUBY_YJIT_ENABLE=1
 
 # Will invalidate cache as soon as the Gemfile changes
