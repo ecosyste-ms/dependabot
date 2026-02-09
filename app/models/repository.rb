@@ -77,6 +77,7 @@ class Repository < ApplicationRecord
     end
     return if response.status != 200
     json = response.body
+    return unless json.is_a?(Hash)
 
     # Store all metadata from repos.ecosyste.ms
     self.metadata = json
