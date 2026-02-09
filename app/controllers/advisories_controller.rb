@@ -69,7 +69,6 @@ class AdvisoriesController < ApplicationController
   def feed
     @advisories = Advisory.not_withdrawn.recent.limit(50)
     
-    expires_in 1.hour, public: true
     render 'feed', formats: [:atom]
   end
   
@@ -81,7 +80,6 @@ class AdvisoriesController < ApplicationController
                               .order(created_at: :desc)
                               .limit(50)
     
-    expires_in 1.hour, public: true
     render 'issues_feed', formats: [:atom]
   end
 end

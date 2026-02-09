@@ -20,9 +20,8 @@ class HomeController < ApplicationController
       }
     end
     
-    expires_in 1.hour, public: true
   end
-  
+
   def chart_data
     # Chart data for past 30 days PR activity using groupdate
     start_date = 30.days.ago
@@ -40,12 +39,10 @@ class HomeController < ApplicationController
       { name: 'Closed', data: closed_data }
     ]
     
-    expires_in 1.hour, public: true
     render json: result
   end
 
   def about
-    expires_in 1.week, public: true
   end
 
   def feed
@@ -59,7 +56,6 @@ class HomeController < ApplicationController
 
     @issues = scope.limit(100)
     
-    expires_in 1.hour, public: true
     render formats: [:atom]
   end
 end

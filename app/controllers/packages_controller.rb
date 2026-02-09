@@ -103,7 +103,6 @@ class PackagesController < ApplicationController
       { name: 'Closed', data: closed_data }
     ]
     
-    expires_in 1.hour, public: true
     render json: result
   end
 
@@ -156,7 +155,6 @@ class PackagesController < ApplicationController
     
     @pagy, @issue_packages = pagy_countless(issue_packages, limit: 50)
     
-    expires_in 1.hour, public: true
     render 'show', formats: [:atom]
   end
 
@@ -174,7 +172,6 @@ class PackagesController < ApplicationController
     
     @pagy, @issues = pagy_countless(scope)
     
-    expires_in 1.hour, public: true
   end
 
   def ecosystem_feed
@@ -191,7 +188,6 @@ class PackagesController < ApplicationController
     
     @pagy, @issues = pagy_countless(scope, limit: 50)
     
-    expires_in 1.hour, public: true
     render formats: [:atom]
   end
 

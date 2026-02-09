@@ -3,7 +3,6 @@ class OwnersController < ApplicationController
     @host = Host.find_by!(name: params[:host_id])
     @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
-    expires_in 1.day, public: true
   end
 
   def show
@@ -28,7 +27,6 @@ class OwnersController < ApplicationController
 
     @pagy, @repositories = pagy_countless(scope)
 
-    expires_in 1.day, public: true
   end
 
   def issues
@@ -43,7 +41,6 @@ class OwnersController < ApplicationController
     
     @pagy, @issues = pagy_countless(scope)
     
-    expires_in 1.hour, public: true
   end
 
   def feed
@@ -58,7 +55,6 @@ class OwnersController < ApplicationController
     
     @pagy, @issues = pagy_countless(scope, limit: 50)
     
-    expires_in 1.hour, public: true
     render formats: [:atom]
   end
 end

@@ -1,4 +1,6 @@
 class Api::V1::RepositoriesController < Api::V1::ApplicationController
+  skip_before_action :set_cache_headers, only: [:lookup, :ping]
+  skip_before_action :set_api_cache_headers, only: [:lookup, :ping]
 
   def index
     @host = Host.find_by_name!(params[:host_id])

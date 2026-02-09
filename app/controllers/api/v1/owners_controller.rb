@@ -3,7 +3,6 @@ class Api::V1::OwnersController < Api::V1::ApplicationController
     @host = Host.find_by!(name: params[:host_id])
     @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
-    expires_in 1.day, public: true
   end
 
   def show
@@ -35,7 +34,6 @@ class Api::V1::OwnersController < Api::V1::ApplicationController
     @maintainers = @host.issues.owner(@owner).maintainers.group(:user).count.sort_by{|k,v| -v }
     @active_maintainers = @host.issues.owner(@owner).maintainers.where('issues.created_at > ?', 1.year.ago).group(:user).count.sort_by{|k,v| -v }
 
-    expires_in 1.day, public: true
   end
 
   def maintainers
@@ -45,6 +43,5 @@ class Api::V1::OwnersController < Api::V1::ApplicationController
     @maintainers = @host.issues.owner(@owner).maintainers.group(:user).count.sort_by{|k,v| -v }
     @active_maintainers = @host.issues.owner(@owner).maintainers.where('issues.created_at > ?', 1.year.ago).group(:user).count.sort_by{|k,v| -v }
 
-    expires_in 1.day, public: true    
   end
 end
