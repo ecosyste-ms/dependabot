@@ -25,11 +25,11 @@ class HostsController < ApplicationController
       scope = scope.where("full_name ILIKE ?", search_term)
     end
 
-    sort = params[:sort].presence || 'issues_count'
+    sort = sanitize_sort(Repository.sortable_columns, default: 'issues_count')
     if params[:order] == 'asc'
-      scope = scope.order(Arel.sql(sort).asc.nulls_last)
+      scope = scope.order(sort.asc.nulls_last)
     else
-      scope = scope.order(Arel.sql(sort).desc.nulls_last)
+      scope = scope.order(sort.desc.nulls_last)
     end
 
     @pagy, @repositories = pagy_countless(scope)

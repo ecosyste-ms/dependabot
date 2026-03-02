@@ -18,11 +18,11 @@ class OwnersController < ApplicationController
     # Get repositories with Dependabot PRs for this owner
     scope = @host.repositories.where(owner: @owner).where('issues_count > 0')
     
-    sort = params[:sort].presence || 'issues_count'
+    sort = sanitize_sort(Repository.sortable_columns, default: 'issues_count')
     if params[:order] == 'asc'
-      scope = scope.order(Arel.sql(sort).asc.nulls_last)
+      scope = scope.order(sort.asc.nulls_last)
     else
-      scope = scope.order(Arel.sql(sort).desc.nulls_last)
+      scope = scope.order(sort.desc.nulls_last)
     end
 
     @pagy, @repositories = pagy_countless(scope)

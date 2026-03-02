@@ -1,4 +1,17 @@
 class Repository < ApplicationRecord
+  def self.sortable_columns
+    {
+      'issues_count' => 'issues_count',
+      'pull_requests_count' => 'pull_requests_count',
+      'merged_pull_requests_count' => 'merged_pull_requests_count',
+      'avg_time_to_close_pull_request' => 'avg_time_to_close_pull_request',
+      'avg_time_to_close_issue' => 'avg_time_to_close_issue',
+      'created_at' => 'created_at',
+      'updated_at' => 'updated_at',
+      'full_name' => 'full_name',
+    }
+  end
+
   belongs_to :host
 
   has_many :issues, dependent: :delete_all
