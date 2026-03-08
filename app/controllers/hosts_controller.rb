@@ -1,4 +1,6 @@
 class HostsController < ApplicationController
+  before_action :find_host_by_id, only: [:show]
+
   def index
     github_host = Host.find_by(name: 'GitHub')
     if github_host
@@ -15,8 +17,6 @@ class HostsController < ApplicationController
   end
 
   def show
-    @host = Host.find_by_name!(params[:id])
-
     scope = @host.repositories.not_fork
 
     # Search functionality

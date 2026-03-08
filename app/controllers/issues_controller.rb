@@ -1,6 +1,7 @@
 class IssuesController < ApplicationController
+  before_action :find_host
+
   def index
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:repository_id].downcase)
     
     scope = @repository.issues
@@ -12,7 +13,6 @@ class IssuesController < ApplicationController
   end
 
   def show
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:repository_id].downcase)
     @issue = @repository.issues.find_by!(number: params[:id])
   end

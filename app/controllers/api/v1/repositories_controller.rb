@@ -1,9 +1,9 @@
 class Api::V1::RepositoriesController < Api::V1::ApplicationController
   skip_before_action :set_cache_headers, only: [:lookup, :ping]
   skip_before_action :set_api_cache_headers, only: [:lookup, :ping]
+  before_action :find_host, only: [:index, :show, :ping]
 
   def index
-    @host = Host.find_by_name!(params[:host_id])
     scope = @host.repositories.visible.order('last_synced_at DESC').includes(:host)
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
@@ -37,7 +37,6 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
   end
 
   def show
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:id].downcase)
     fresh_when @repository, public: true
     @maintainers = @repository.issues.maintainers.group(:user).count.sort_by{|k,v| -v }
@@ -45,7 +44,6 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
   end
 
   def ping
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:id].downcase)
     if @repository
       @repository.sync_async

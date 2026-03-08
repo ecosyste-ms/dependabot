@@ -1,5 +1,6 @@
 class RepositoriesController < ApplicationController
   skip_before_action :set_cache_headers, only: [:lookup]
+  before_action :find_host, only: [:index, :show, :feed]
 
   def lookup
     url = params[:url]
@@ -18,12 +19,10 @@ class RepositoriesController < ApplicationController
   end
 
   def index
-    @host = Host.find_by_name!(params[:host_id])
     redirect_to host_path(@host)
   end
 
   def show
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
     raise ActiveRecord::RecordNotFound unless @repository
     fresh_when(@repository, public: true)
@@ -39,7 +38,6 @@ class RepositoriesController < ApplicationController
   end
 
   def feed
-    @host = Host.find_by_name!(params[:host_id])
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
     raise ActiveRecord::RecordNotFound unless @repository
     

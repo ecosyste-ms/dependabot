@@ -1,12 +1,12 @@
 class OwnersController < ApplicationController
+  before_action :find_host
+
   def index
-    @host = Host.find_by!(name: params[:host_id])
     @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
   end
 
   def show
-    @host = Host.find_by!(name: params[:host_id])
     @owner = params[:id]
 
     @pull_requests_count = @host.issues.owner(@owner).where(pull_request: true).count
@@ -30,7 +30,6 @@ class OwnersController < ApplicationController
   end
 
   def issues
-    @host = Host.find_by!(name: params[:host_id])
     @owner = params[:id]
     
     # Get all issues for repositories owned by this owner
@@ -44,7 +43,6 @@ class OwnersController < ApplicationController
   end
 
   def feed
-    @host = Host.find_by!(name: params[:host_id])
     @owner = params[:id]
     
     # Get recent issues for repositories owned by this owner with pagination
