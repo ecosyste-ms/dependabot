@@ -1,0 +1,43 @@
+app/controllers/hosts_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/api/v1/hosts_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/repositories_controller.rb
+  81b71850e60824e5 3
+app/controllers/api/v1/owners_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/api/v1/issues_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/owners_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/application_controller.rb
+  81b71850e60824e5 11-28
+test/models/host_test.rb
+  81b71850e60824e5 1-48
+app/models/host.rb
+  81b71850e60824e5 5,14-16,18-23
+app/controllers/issues_controller.rb
+  81b71850e60824e5 2-3
+app/controllers/api/v1/repositories_controller.rb
+  81b71850e60824e5 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.8",
+  "base_commit_sha": "b8adb550df4d47c0abd9a98ff509e902788e9644",
+  "prompts": {
+    "81b71850e60824e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7001e13-a462-43a7-8943-9e6ae06e2a4b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 91,
+      "total_deletions": 22,
+      "accepted_lines": 90,
+      "overriden_lines": 0
+    }
+  }
+}
