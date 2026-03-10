@@ -52,7 +52,7 @@ class Package < ApplicationRecord
     'kubernetes' => 'k8s',
     'bazel' => 'bazel',
     'julia' => 'julia'
-    # Note: devcontainers, vcpkg, rust-toolchain, submodules have no official PURL type
+    # Note: devcontainers, vcpkg, rust-toolchain, submodules, pre-commit have no official PURL type
     # They fall back to ecosystem name via purl_type method
   }.freeze
   

@@ -125,6 +125,9 @@ class Issue < ApplicationRecord
 
     # Rust toolchain
     'rust-toolchain' => 'rust-toolchain',
+
+    # Pre-commit hooks
+    'pre-commit' => 'pre-commit',
   }
 
   scope :with_dependency_metadata, -> { where('length(dependency_metadata::text) > 2') }
