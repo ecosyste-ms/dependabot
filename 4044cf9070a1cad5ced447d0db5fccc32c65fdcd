@@ -1,0 +1,27 @@
+app/models/package.rb
+  7d3a8f1215f5a342 55
+test/models/issue_test.rb
+  7d3a8f1215f5a342 669-731
+app/models/issue.rb
+  7d3a8f1215f5a342 128-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "4044cf9070a1cad5ced447d0db5fccc32c65fdcd",
+  "prompts": {
+    "7d3a8f1215f5a342": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "363d7f36-74ac-41e0-b7b4-8eb1ec57fd06",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 67,
+      "total_deletions": 1,
+      "accepted_lines": 67,
+      "overriden_lines": 0
+    }
+  }
+}
