@@ -666,6 +666,69 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal 'submodules', Issue::DEPENDABOT_ECOSYSTEMS['gitsubmodule']
   end
 
+  test "DEPENDABOT_ECOSYSTEMS maps pre-commit to pre-commit" do
+    assert_equal 'pre-commit', Issue::DEPENDABOT_ECOSYSTEMS['pre-commit']
+  end
+
+  test "parses pre-commit hook bump with label" do
+    issue = Issue.new(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Bump pre-commit/mirrors-prettier from v3.0.0 to v3.1.0",
+      number: 1,
+      state: "open",
+      labels: ["pre-commit"]
+    )
+    metadata = issue.parse_dependabot_metadata
+
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal 1, metadata[:packages].length
+    assert_equal "pre-commit/mirrors-prettier", metadata[:packages][0][:name]
+    assert_equal "v3.0.0", metadata[:packages][0][:old_version]
+    assert_equal "v3.1.0", metadata[:packages][0][:new_version]
+    assert_equal "pre-commit", metadata[:ecosystem]
+  end
+
+  test "parses pre-commit hook bump with full github url as package name" do
+    issue = Issue.new(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Bump https://github.com/pre-commit/mirrors-prettier from v3.0.0 to v3.1.0",
+      number: 1,
+      state: "open",
+      labels: ["pre-commit"]
+    )
+    metadata = issue.parse_dependabot_metadata
+
+    assert_equal "Bump", metadata[:prefix]
+    assert_equal "https://github.com/pre-commit/mirrors-prettier", metadata[:packages][0][:name]
+    assert_equal "v3.0.0", metadata[:packages][0][:old_version]
+    assert_equal "v3.1.0", metadata[:packages][0][:new_version]
+    assert_equal "pre-commit", metadata[:ecosystem]
+  end
+
+  test "parses pre-commit group update" do
+    issue = Issue.new(
+      repository: @repository,
+      host: @host,
+      user: "dependabot[bot]",
+      title: "Bump the pre-commit-hooks group with 2 updates",
+      body: "| Package | From | To |\n| --- | --- | --- |\n| pre-commit/mirrors-prettier | `v3.0.0` | `v3.1.0` |\n| psf/black-pre-commit-mirror | `24.1.0` | `24.2.0` |\n\n",
+      number: 1,
+      state: "open",
+      labels: ["pre-commit"]
+    )
+    metadata = issue.parse_dependabot_metadata
+
+    assert_equal 2, metadata[:packages].length
+    assert_equal "pre-commit/mirrors-prettier", metadata[:packages][0][:name]
+    assert_equal "psf/black-pre-commit-mirror", metadata[:packages][1][:name]
+    assert_equal "pre-commit", metadata[:ecosystem]
+    assert_equal "pre-commit-hooks", metadata[:group_name]
+  end
+
   test "parses metadata for any user since all PRs are from dependabot" do
     issue = Issue.new(
       repository: @repository,
