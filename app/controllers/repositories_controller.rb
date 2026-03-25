@@ -11,6 +11,7 @@ class RepositoriesController < ApplicationController
     path = parsed_url.path.delete_prefix('/').chomp('/')
     @repository = @host.repositories.find_by('lower(full_name) = ?', path.downcase)
     if @repository
+      raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
       @repository.sync_async(request.remote_ip) unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
       redirect_to host_repository_path(@host, @repository)
     else
@@ -25,6 +26,7 @@ class RepositoriesController < ApplicationController
   def show
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
     raise ActiveRecord::RecordNotFound unless @repository
+    raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
     fresh_when(@repository, public: true)
     
     # Get issues for the main content area with optional label filtering
@@ -40,7 +42,8 @@ class RepositoriesController < ApplicationController
   def feed
     @repository = @host.repositories.find_by('lower(full_name) = ?', params[:id].downcase)
     raise ActiveRecord::RecordNotFound unless @repository
-    
+    raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
+
     # Get issues for the feed with optional label filtering
     scope = @repository.issues.includes(:host, issue_packages: :package)
     

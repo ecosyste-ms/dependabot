@@ -4,10 +4,13 @@ class OwnersController < ApplicationController
   def index
     @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
+    @hidden_owners = @host.owners.hidden.pluck(:login).to_set
   end
 
   def show
     @owner = params[:id]
+    owner_record = @host.owners.find_by(login: @owner.downcase)
+    raise ActiveRecord::RecordNotFound if owner_record&.hidden?
 
     @pull_requests_count = @host.issues.owner(@owner).where(pull_request: true).count
     @merged_pull_requests_count = @host.issues.owner(@owner).where(pull_request: true).where.not(merged_at: nil).count
@@ -31,6 +34,8 @@ class OwnersController < ApplicationController
 
   def issues
     @owner = params[:id]
+    owner_record = @host.owners.find_by(login: @owner.downcase)
+    raise ActiveRecord::RecordNotFound if owner_record&.hidden?
     
     # Get all issues for repositories owned by this owner
     scope = @host.issues.joins(:repository)
@@ -44,6 +49,8 @@ class OwnersController < ApplicationController
 
   def feed
     @owner = params[:id]
+    owner_record = @host.owners.find_by(login: @owner.downcase)
+    raise ActiveRecord::RecordNotFound if owner_record&.hidden?
     
     # Get recent issues for repositories owned by this owner with pagination
     scope = @host.issues.joins(:repository)

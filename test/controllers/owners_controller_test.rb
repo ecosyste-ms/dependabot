@@ -117,6 +117,33 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_match issue2.title, response.body
   end
 
+  test "hidden owner show returns 404" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'hidden-org/repo', owner: 'hidden-org', issues_count: 5)
+    Owner.create!(host: host, login: 'hidden-org', hidden: true)
+
+    get host_owner_path(host, 'hidden-org')
+    assert_response :not_found
+  end
+
+  test "hidden owner issues returns 404" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    Repository.create!(host: host, full_name: 'hidden-org/repo', owner: 'hidden-org')
+    Owner.create!(host: host, login: 'hidden-org', hidden: true)
+
+    get issues_host_owner_path(host, 'hidden-org')
+    assert_response :not_found
+  end
+
+  test "hidden owner feed returns 404" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    Repository.create!(host: host, full_name: 'hidden-org/repo', owner: 'hidden-org')
+    Owner.create!(host: host, login: 'hidden-org', hidden: true)
+
+    get feed_host_owner_path(host, 'hidden-org')
+    assert_response :not_found
+  end
+
   test "owner issues page includes feed discovery link" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     

@@ -4,10 +4,13 @@ class Api::V1::OwnersController < Api::V1::ApplicationController
   def index
     @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
+    @hidden_owners = @host.owners.hidden.pluck(:login).to_set
   end
 
   def show
     @owner = params[:id]
+    owner_record = @host.owners.find_by(login: @owner.downcase)
+    raise ActiveRecord::RecordNotFound if owner_record&.hidden?
 
     @issues_count = @host.issues.owner(@owner).where(pull_request: false).count
     @pull_requests_count = @host.issues.owner(@owner).where(pull_request: true).count
@@ -38,6 +41,8 @@ class Api::V1::OwnersController < Api::V1::ApplicationController
 
   def maintainers
     @owner = params[:id]
+    owner_record = @host.owners.find_by(login: @owner.downcase)
+    raise ActiveRecord::RecordNotFound if owner_record&.hidden?
 
     @maintainers = @host.issues.owner(@owner).maintainers.group(:user).count.sort_by{|k,v| -v }
     @active_maintainers = @host.issues.owner(@owner).maintainers.where('issues.created_at > ?', 1.year.ago).group(:user).count.sort_by{|k,v| -v }

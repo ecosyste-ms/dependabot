@@ -194,6 +194,15 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal issue.id, issues_with_includes.first.id
   end
 
+  test "should return 404 for repository with hidden owner" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'hidden-org/repo', owner: 'hidden-org')
+    Owner.create!(host: host, login: 'hidden-org', hidden: true)
+
+    get host_repository_path(host, repository)
+    assert_response :not_found
+  end
+
   test "should raise RecordNotFound when repository does not exist" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     

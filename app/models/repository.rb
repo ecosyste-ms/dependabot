@@ -75,6 +75,16 @@ class Repository < ApplicationRecord
     read_attribute(:owner) || full_name.split('/').first
   end
 
+  def owner_record
+    return nil if owner.blank?
+    host.owners.find_by(login: owner)
+  end
+
+  def owner_hidden?
+    return false if owner.blank?
+    owner_record&.hidden? == true
+  end
+
   def sync_details
     conn = Faraday.new(repos_api_url) do |f|
       f.request :json

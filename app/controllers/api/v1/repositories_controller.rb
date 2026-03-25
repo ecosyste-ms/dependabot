@@ -29,6 +29,7 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
     path = parsed_url.path.delete_prefix('/').chomp('/')
     @repository = @host.repositories.find_by('lower(full_name) = ?', path.downcase)
     if @repository
+      raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
       @repository.sync_async(request.remote_ip) unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
       redirect_to api_v1_host_repository_path(@host, @repository)
     else
@@ -38,6 +39,7 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
 
   def show
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:id].downcase)
+    raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
     fresh_when @repository, public: true
     @maintainers = @repository.issues.maintainers.group(:user).count.sort_by{|k,v| -v }
     @active_maintainers = @repository.issues.maintainers.where('issues.created_at > ?', 1.year.ago).group(:user).count.sort_by{|k,v| -v }
@@ -45,6 +47,7 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
 
   def ping
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:id].downcase)
+    raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
     if @repository
       @repository.sync_async
     end
