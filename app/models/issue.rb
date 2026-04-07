@@ -128,6 +128,9 @@ class Issue < ApplicationRecord
 
     # Pre-commit hooks
     'pre-commit' => 'pre-commit',
+
+    # Nix
+    'nix' => 'nix',
   }
 
   scope :with_dependency_metadata, -> { where('length(dependency_metadata::text) > 2') }
