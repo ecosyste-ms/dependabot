@@ -51,7 +51,8 @@ class Package < ApplicationRecord
     'helm' => 'helm',
     'kubernetes' => 'k8s',
     'bazel' => 'bazel',
-    'julia' => 'julia'
+    'julia' => 'julia',
+    'nix' => 'nix'
     # Note: devcontainers, vcpkg, rust-toolchain, submodules, pre-commit have no official PURL type
     # They fall back to ecosystem name via purl_type method
   }.freeze

@@ -670,6 +670,10 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal 'pre-commit', Issue::DEPENDABOT_ECOSYSTEMS['pre-commit']
   end
 
+  test "DEPENDABOT_ECOSYSTEMS maps nix to nix" do
+    assert_equal 'nix', Issue::DEPENDABOT_ECOSYSTEMS['nix']
+  end
+
   test "parses pre-commit hook bump with label" do
     issue = Issue.new(
       repository: @repository,

@@ -69,7 +69,7 @@ class PackageTest < ActiveSupport::TestCase
   end
 
   test "should accept new Dependabot ecosystems" do
-    %w[bazel devcontainers julia vcpkg rust-toolchain].each do |ecosystem|
+    %w[bazel devcontainers julia vcpkg rust-toolchain nix].each do |ecosystem|
       package = Package.new(name: "test-#{ecosystem}-package", ecosystem: ecosystem)
       assert package.valid?, "Expected #{ecosystem} to be valid but got: #{package.errors.full_messages}"
     end
