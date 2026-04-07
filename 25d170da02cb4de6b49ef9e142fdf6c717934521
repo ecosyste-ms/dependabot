@@ -1,0 +1,29 @@
+test/models/issue_test.rb
+  f4239b9bc15c7aaf 673-676
+app/models/issue.rb
+  f4239b9bc15c7aaf 131-133
+app/models/package.rb
+  f4239b9bc15c7aaf 54-55
+test/models/package_test.rb
+  f4239b9bc15c7aaf 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "25d170da02cb4de6b49ef9e142fdf6c717934521",
+  "prompts": {
+    "f4239b9bc15c7aaf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d51dbd6-5722-4864-bfcf-257596787752",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 2,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
