@@ -15,3 +15,16 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
   }
 }
+
+// Allow flex children that contain long repository/package names to shrink on
+// narrow screens instead of forcing cards wider than the viewport.
+.min-width-0 {
+  min-width: 0;
+}
+
+// Badges often contain package coordinates such as ecosystem:name. Let those
+// wrap on mobile instead of overflowing their card containers.
+.badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
