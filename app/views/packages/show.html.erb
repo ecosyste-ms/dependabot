@@ -92,9 +92,11 @@
                           </span>
                         <% end %>
                         
-                        <span class="text-muted small ms-2">
-                          published <%= time_ago_in_words(advisory.published_at) %> ago
-                        </span>
+                        <% if advisory.published_at %>
+                          <span class="text-muted small ms-2">
+                            published <%= time_ago_in_words(advisory.published_at) %> ago
+                          </span>
+                        <% end %>
                         
                         <span class="text-muted small ms-2">
                           • updated <%= time_ago_in_words(advisory.updated_at) %> ago

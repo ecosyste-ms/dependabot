@@ -209,15 +209,17 @@
         </div>
         <div class="card-body">
           <table class="table table-sm mb-0">
-            <tr>
-              <td><strong>Published:</strong></td>
-              <td>
-                <%= @advisory.published_at.strftime('%B %d, %Y') %>
-                <small class="text-muted d-block">
-                  <%= time_ago_in_words(@advisory.published_at) %> ago
-                </small>
-              </td>
-            </tr>
+            <% if @advisory.published_at %>
+              <tr>
+                <td><strong>Published:</strong></td>
+                <td>
+                  <%= @advisory.published_at.strftime('%B %d, %Y') %>
+                  <small class="text-muted d-block">
+                    <%= time_ago_in_words(@advisory.published_at) %> ago
+                  </small>
+                </td>
+              </tr>
+            <% end %>
             
             <tr>
               <td><strong>Updated:</strong></td>

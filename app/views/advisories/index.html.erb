@@ -151,9 +151,11 @@
                     </span>
                   <% end %>
                   
-                  <span class="text-muted small ms-2">
-                    <%= time_ago_in_words(advisory.published_at) %> ago
-                  </span>
+                  <% if advisory.published_at %>
+                    <span class="text-muted small ms-2">
+                      <%= time_ago_in_words(advisory.published_at) %> ago
+                    </span>
+                  <% end %>
                 </div>
                 
                 <% if advisory.description.present? %>

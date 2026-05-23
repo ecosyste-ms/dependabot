@@ -214,6 +214,33 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     end
   end
   
+  test "should render index with advisory missing published_at" do
+    Advisory.create!(
+      uuid: 'no-published-uuid',
+      title: 'Advisory Without Published Date',
+      severity: 'MEDIUM',
+      published_at: nil,
+      identifiers: ['CVE-2023-5555']
+    )
+
+    get advisories_url
+    assert_response :success
+    assert_match 'Advisory Without Published Date', response.body
+  end
+
+  test "should render show with advisory missing published_at" do
+    advisory = Advisory.create!(
+      uuid: 'no-published-show-uuid',
+      title: 'Advisory Without Published Date',
+      severity: 'MEDIUM',
+      published_at: nil,
+      identifiers: ['CVE-2023-6666']
+    )
+
+    get advisory_url(advisory.uuid)
+    assert_response :success
+  end
+
   test "should exclude withdrawn advisories from index" do
     # Create a withdrawn advisory
     withdrawn_advisory = Advisory.create!(
