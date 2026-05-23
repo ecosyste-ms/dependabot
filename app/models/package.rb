@@ -165,16 +165,25 @@ class Package < ApplicationRecord
     end
   end
   
+  def latest_issue_at
+    if has_attribute?(:latest_issue_at) && read_attribute(:latest_issue_at)
+      read_attribute(:latest_issue_at)
+    else
+      issue_packages.maximum(:pr_created_at)
+    end
+  end
+
   def update_unique_repositories_counts!
     total_count = issues.joins(:repository).distinct.count('repositories.id')
     past_30_days_count = issues.joins(:repository, :issue_packages)
                                .where(issue_packages: { pr_created_at: 30.days.ago.. })
                                .distinct
                                .count('repositories.id')
-    
+
     update_columns(
       unique_repositories_count: total_count,
-      unique_repositories_count_past_30_days: past_30_days_count
+      unique_repositories_count_past_30_days: past_30_days_count,
+      latest_issue_at: issue_packages.maximum(:pr_created_at)
     )
   end
   

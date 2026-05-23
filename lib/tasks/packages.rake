@@ -61,6 +61,18 @@ namespace :packages do
     puts "Enqueued #{count} packages for sync"
   end
   
+  desc "Populate latest_issue_at for all packages"
+  task populate_latest_issue_at: :environment do
+    puts "Populating latest_issue_at for packages..."
+
+    Package.find_each do |package|
+      package.update_column(:latest_issue_at, package.issue_packages.maximum(:pr_created_at))
+      print "."
+    end
+
+    puts "\nlatest_issue_at population complete!"
+  end
+
   desc "Update unique repositories counts for all packages"
   task update_unique_repositories_counts: :environment do
     puts "Updating unique repositories counts for all packages..."

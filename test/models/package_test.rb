@@ -74,4 +74,42 @@ class PackageTest < ActiveSupport::TestCase
       assert package.valid?, "Expected #{ecosystem} to be valid but got: #{package.errors.full_messages}"
     end
   end
+
+  test "latest_issue_at returns cached column when present" do
+    package = Package.create!(name: "cached-pkg", ecosystem: "npm")
+    timestamp = 3.days.ago
+    package.update_column(:latest_issue_at, timestamp)
+
+    assert_in_delta timestamp.to_f, package.latest_issue_at.to_f, 1
+  end
+
+  test "latest_issue_at falls back to issue_packages max when not cached" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/repo', owner: 'test')
+    package = Package.create!(name: "fallback-pkg", ecosystem: "npm")
+
+    older = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'old', state: 'open', pull_request: true, uuid: 'ip-old', created_at: 5.days.ago)
+    newer = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 2, title: 'new', state: 'open', pull_request: true, uuid: 'ip-new', created_at: 1.day.ago)
+    IssuePackage.create!(issue: older, package: package, pr_created_at: older.created_at)
+    IssuePackage.create!(issue: newer, package: package, pr_created_at: newer.created_at)
+
+    package.update_column(:latest_issue_at, nil)
+    package.reload
+
+    assert_in_delta newer.created_at.to_f, package.latest_issue_at.to_f, 1
+  end
+
+  test "update_unique_repositories_counts! caches latest_issue_at" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/repo2', owner: 'test')
+    package = Package.create!(name: "counts-pkg", ecosystem: "npm")
+    issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'x', state: 'open', pull_request: true, uuid: 'ip-counts', created_at: 2.days.ago)
+    IssuePackage.create!(issue: issue, package: package, pr_created_at: issue.created_at)
+
+    package.update_column(:latest_issue_at, nil)
+    package.update_unique_repositories_counts!
+    package.reload
+
+    assert_in_delta issue.created_at.to_f, package.read_attribute(:latest_issue_at).to_f, 1
+  end
 end

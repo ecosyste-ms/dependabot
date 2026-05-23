@@ -45,8 +45,8 @@
             </div>
             <div class="col-md-6 mb-3">
               <strong>Latest PR:</strong><br>
-              <% if @package.issues_count > 0 %>
-                <%= time_ago_in_words(@package.issues.maximum(:created_at)) %> ago
+              <% if @package.latest_issue_at %>
+                <%= time_ago_in_words(@package.latest_issue_at) %> ago
               <% else %>
                 Never
               <% end %>
