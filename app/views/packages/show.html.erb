@@ -411,10 +411,10 @@
               <h6 class="mb-0">PR Status</h6>
             </div>
             <div class="card-body">
-              <% 
-                open_count = @package.issues.where(state: 'open').count
-                merged_count = @package.issues.where.not(merged_at: nil).count
-                closed_count = @package.issues.where(state: 'closed', merged_at: nil).count
+              <%
+                open_count = @package.open_issues_count
+                merged_count = @package.merged_issues_count
+                closed_count = @package.closed_issues_count
               %>
               
               <div class="d-flex justify-content-between mb-2">
@@ -445,10 +445,10 @@
               <h6 class="mb-0">PR Types</h6>
             </div>
             <div class="card-body">
-              <% update_types = @package.issue_packages.group(:update_type).count %>
+              <% update_types = @package.update_type_counts %>
               <% if update_types.any? %>
                 <% update_types.each do |type, count| %>
-                  <% next if type.nil? %>
+                  <% next if type.blank? %>
                   <div class="d-flex justify-content-between mb-2">
                     <%= link_to show_packages_path(@package.ecosystem, @package.name, request.query_parameters.merge(type: type)), class: "text-decoration-none" do %>
                       <span class="badge bg-<%= type == 'major' ? 'warning' : type == 'minor' ? 'info' : type == 'removal' ? 'danger' : 'success' %>">

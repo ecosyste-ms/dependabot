@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_075635) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_053814) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -174,15 +174,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_075635) do
   end
 
   create_table "packages", force: :cascade do |t|
+    t.integer "closed_issues_count"
     t.datetime "created_at", null: false
     t.string "ecosystem", null: false
     t.integer "issues_count", default: 0, null: false
     t.datetime "latest_issue_at"
+    t.integer "merged_issues_count"
     t.json "metadata", default: {}
     t.string "name", null: false
+    t.integer "open_issues_count"
     t.string "repository_url"
     t.integer "unique_repositories_count", default: 0
     t.integer "unique_repositories_count_past_30_days", default: 0
+    t.jsonb "update_type_counts", default: {}
     t.datetime "updated_at", null: false
     t.index "lower((repository_url)::text)", name: "index_packages_on_lower_repository_url"
     t.index ["ecosystem", "name"], name: "index_packages_on_ecosystem_and_name", unique: true

@@ -112,4 +112,116 @@ class PackageTest < ActiveSupport::TestCase
 
     assert_in_delta issue.created_at.to_f, package.read_attribute(:latest_issue_at).to_f, 1
   end
+
+  test "issue_status_counts groups by open/merged/closed in one query" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/status', owner: 'test')
+    package = Package.create!(name: "status-pkg", ecosystem: "npm")
+
+    open_issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'o', state: 'open', pull_request: true, uuid: 'st-open')
+    merged_issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 2, title: 'm', state: 'closed', merged_at: 1.day.ago, pull_request: true, uuid: 'st-merged')
+    closed_issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 3, title: 'c', state: 'closed', pull_request: true, uuid: 'st-closed')
+    IssuePackage.create!(issue: open_issue, package: package, pr_created_at: open_issue.created_at)
+    IssuePackage.create!(issue: merged_issue, package: package, pr_created_at: merged_issue.created_at)
+    IssuePackage.create!(issue: closed_issue, package: package, pr_created_at: closed_issue.created_at)
+
+    package.reload
+    counts = package.issue_status_counts
+
+    assert_equal 1, counts['open']
+    assert_equal 1, counts['merged']
+    assert_equal 1, counts['closed']
+  end
+
+  test "status count readers prefer cached column" do
+    package = Package.create!(name: "cached-status-pkg", ecosystem: "npm")
+    package.update_columns(open_issues_count: 5, merged_issues_count: 3, closed_issues_count: 2)
+
+    assert_equal 5, package.open_issues_count
+    assert_equal 3, package.merged_issues_count
+    assert_equal 2, package.closed_issues_count
+  end
+
+  test "update_type_counts prefers cached column" do
+    package = Package.create!(name: "cached-types-pkg", ecosystem: "npm")
+    package.update_column(:update_type_counts, { 'major' => 4, 'patch' => 9 })
+
+    assert_equal({ 'major' => 4, 'patch' => 9 }, package.update_type_counts)
+  end
+
+  test "adjust_status_count moves one between columns atomically" do
+    package = Package.create!(name: "adjust-pkg", ecosystem: "npm")
+    package.update_columns(open_issues_count: 5, merged_issues_count: 2, closed_issues_count: 1)
+
+    package.adjust_status_count('open', 'merged')
+    package.reload
+
+    assert_equal 4, package.read_attribute(:open_issues_count)
+    assert_equal 3, package.read_attribute(:merged_issues_count)
+    assert_equal 1, package.read_attribute(:closed_issues_count)
+  end
+
+  test "adjust_status_count is a no-op when counts not yet backfilled" do
+    package = Package.create!(name: "nobackfill-pkg", ecosystem: "npm")
+    assert_nil package.read_attribute(:open_issues_count)
+
+    package.adjust_status_count('open', 'merged')
+    package.reload
+
+    assert_nil package.read_attribute(:open_issues_count)
+    assert_nil package.read_attribute(:merged_issues_count)
+  end
+
+  test "issue state change adjusts package status counts" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/adjust', owner: 'test')
+    package = Package.create!(name: "issue-adjust-pkg", ecosystem: "npm")
+    issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'x', state: 'open', pull_request: true, uuid: 'adj-1')
+    IssuePackage.create!(issue: issue, package: package, pr_created_at: issue.created_at)
+
+    package.reload
+    assert_equal 1, package.read_attribute(:open_issues_count)
+    assert_equal 0, package.read_attribute(:merged_issues_count)
+
+    issue.update!(state: 'closed', merged_at: Time.current)
+    package.reload
+
+    assert_equal 0, package.read_attribute(:open_issues_count)
+    assert_equal 1, package.read_attribute(:merged_issues_count)
+    assert_equal 0, package.read_attribute(:closed_issues_count)
+  end
+
+  test "issue state change to closed without merge adjusts closed count" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/adjust2', owner: 'test')
+    package = Package.create!(name: "issue-close-pkg", ecosystem: "npm")
+    issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'x', state: 'open', pull_request: true, uuid: 'adj-2')
+    IssuePackage.create!(issue: issue, package: package, pr_created_at: issue.created_at)
+
+    issue.update!(state: 'closed')
+    package.reload
+
+    assert_equal 0, package.read_attribute(:open_issues_count)
+    assert_equal 0, package.read_attribute(:merged_issues_count)
+    assert_equal 1, package.read_attribute(:closed_issues_count)
+  end
+
+  test "update_unique_repositories_counts! caches status and update type counts" do
+    host = Host.create!(name: 'github.com', url: 'https://github.com', kind: 'github')
+    repo = Repository.create!(host: host, full_name: 'test/cache', owner: 'test')
+    package = Package.create!(name: "cache-all-pkg", ecosystem: "npm")
+
+    open_issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 1, title: 'o', state: 'open', pull_request: true, uuid: 'ca-open')
+    merged_issue = Issue.create!(repository: repo, host: host, user: 'dependabot[bot]', number: 2, title: 'm', state: 'closed', merged_at: 1.day.ago, pull_request: true, uuid: 'ca-merged')
+    IssuePackage.create!(issue: open_issue, package: package, pr_created_at: open_issue.created_at, update_type: 'major')
+    IssuePackage.create!(issue: merged_issue, package: package, pr_created_at: merged_issue.created_at, update_type: 'patch')
+
+    package.update_unique_repositories_counts!
+    package.reload
+
+    assert_equal 1, package.read_attribute(:open_issues_count)
+    assert_equal 1, package.read_attribute(:merged_issues_count)
+    assert_equal 0, package.read_attribute(:closed_issues_count)
+    assert_equal({ 'major' => 1, 'patch' => 1 }, package.read_attribute(:update_type_counts))
+  end
 end

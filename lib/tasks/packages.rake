@@ -73,6 +73,24 @@ namespace :packages do
     puts "\nlatest_issue_at population complete!"
   end
 
+  desc "Populate cached issue status and update type counts for all packages"
+  task populate_issue_counts: :environment do
+    puts "Populating issue counts for packages..."
+
+    Package.find_each do |package|
+      status_counts = package.issue_status_counts
+      package.update_columns(
+        open_issues_count: status_counts['open'],
+        merged_issues_count: status_counts['merged'],
+        closed_issues_count: status_counts['closed'],
+        update_type_counts: package.issue_packages.group(:update_type).count.reject { |k, _| k.nil? }
+      )
+      print "."
+    end
+
+    puts "\nIssue counts population complete!"
+  end
+
   desc "Update unique repositories counts for all packages"
   task update_unique_repositories_counts: :environment do
     puts "Updating unique repositories counts for all packages..."

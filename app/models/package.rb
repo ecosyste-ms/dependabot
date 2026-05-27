@@ -173,6 +173,45 @@ class Package < ApplicationRecord
     end
   end
 
+  def open_issues_count
+    read_attribute(:open_issues_count) || issue_status_counts['open']
+  end
+
+  def merged_issues_count
+    read_attribute(:merged_issues_count) || issue_status_counts['merged']
+  end
+
+  def closed_issues_count
+    read_attribute(:closed_issues_count) || issue_status_counts['closed']
+  end
+
+  def update_type_counts
+    cached = read_attribute(:update_type_counts)
+    return cached if cached.present?
+    issue_packages.group(:update_type).count
+  end
+
+  ISSUE_STATUSES = %w[open merged closed].freeze
+
+  def adjust_status_count(from_status, to_status)
+    return if from_status == to_status
+    return unless ISSUE_STATUSES.include?(from_status) && ISSUE_STATUSES.include?(to_status)
+    return if read_attribute(:open_issues_count).nil?
+
+    from_col = "#{from_status}_issues_count"
+    to_col = "#{to_status}_issues_count"
+    Package.where(id: id).update_all(
+      "#{from_col} = GREATEST(#{from_col} - 1, 0), #{to_col} = COALESCE(#{to_col}, 0) + 1"
+    )
+  end
+
+  def issue_status_counts
+    @issue_status_counts ||= begin
+      counts = issues.group(Arel.sql("CASE WHEN issues.merged_at IS NOT NULL THEN 'merged' WHEN issues.state = 'closed' THEN 'closed' ELSE 'open' END")).count
+      { 'open' => 0, 'merged' => 0, 'closed' => 0 }.merge(counts)
+    end
+  end
+
   def update_unique_repositories_counts!
     total_count = issues.joins(:repository).distinct.count('repositories.id')
     past_30_days_count = issues.joins(:repository, :issue_packages)
@@ -180,10 +219,17 @@ class Package < ApplicationRecord
                                .distinct
                                .count('repositories.id')
 
+    @issue_status_counts = nil
+    status_counts = issue_status_counts
+
     update_columns(
       unique_repositories_count: total_count,
       unique_repositories_count_past_30_days: past_30_days_count,
-      latest_issue_at: issue_packages.maximum(:pr_created_at)
+      latest_issue_at: issue_packages.maximum(:pr_created_at),
+      open_issues_count: status_counts['open'],
+      merged_issues_count: status_counts['merged'],
+      closed_issues_count: status_counts['closed'],
+      update_type_counts: issue_packages.group(:update_type).count.reject { |k, _| k.nil? }
     )
   end
   

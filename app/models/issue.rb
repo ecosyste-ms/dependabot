@@ -8,6 +8,8 @@ class Issue < ApplicationRecord
 
   counter_culture :repository, column_name: :issues_count
 
+  after_update :adjust_package_status_counts, if: -> { saved_change_to_state? || saved_change_to_merged_at? }
+
   scope :past_year, -> { where('created_at > ?', 1.year.ago) }
   scope :bot, -> { where('issues.user ILIKE ?', '%[bot]') }
   scope :human, -> { where.not('issues.user ILIKE ?', '%[bot]') }
@@ -570,6 +572,22 @@ class Issue < ApplicationRecord
   def effective_state
     return 'merged' if pull_request && merged_at.present?
     state || 'open'  # Default to 'open' if state is somehow nil
+  end
+
+  def issue_status_for(state_value, merged_at_value)
+    return 'merged' if merged_at_value.present?
+    return 'closed' if state_value == 'closed'
+    'open'
+  end
+
+  def adjust_package_status_counts
+    old_status = issue_status_for(state_before_last_save, merged_at_before_last_save)
+    new_status = issue_status_for(state, merged_at)
+    return if old_status == new_status
+
+    packages.find_each do |package|
+      package.adjust_status_count(old_status, new_status)
+    end
   end
   
   def merged?
