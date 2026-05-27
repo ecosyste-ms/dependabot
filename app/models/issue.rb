@@ -57,6 +57,7 @@ class Issue < ApplicationRecord
     'gradle' => 'gradle',
     'kotlin' => 'maven',
     'scala' => 'maven',
+    'sbt' => 'sbt',
     
     # .NET
     '.net' => 'nuget',

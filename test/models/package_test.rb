@@ -56,6 +56,11 @@ class PackageTest < ActiveSupport::TestCase
     assert_equal 'julia', julia_pkg.purl_type
   end
 
+  test "purl_type maps sbt to maven" do
+    sbt_pkg = Package.new(name: "org.typelevel:cats-core", ecosystem: "sbt")
+    assert_equal 'maven', sbt_pkg.purl_type
+  end
+
   test "purl_type falls back to ecosystem name when no official PURL type exists" do
     # These ecosystems have no official PURL type, so they fall back to ecosystem name
     vcpkg_pkg = Package.new(name: "boost", ecosystem: "vcpkg")

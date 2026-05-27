@@ -34,6 +34,7 @@ class Package < ApplicationRecord
     'go' => 'golang',
     'maven' => 'maven',
     'gradle' => 'maven',  # Gradle uses Maven format
+    'sbt' => 'maven',  # sbt resolves from Maven repositories
     'nuget' => 'nuget',
     'cargo' => 'cargo',
     'docker' => 'docker',
