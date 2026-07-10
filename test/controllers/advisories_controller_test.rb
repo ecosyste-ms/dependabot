@@ -55,6 +55,16 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_match @critical_advisory.title, response.body
     assert_no_match @high_advisory.title, response.body
   end
+
+  test "should return 404 when paging past the end of an empty result set" do
+    get advisories_url(ecosystem: 'nonexistent', page: 3)
+    assert_response :not_found
+  end
+
+  test "should return 200 for page 1 of an empty result set" do
+    get advisories_url(ecosystem: 'nonexistent')
+    assert_response :success
+  end
   
   test "should search by identifier" do
     get advisories_url(q: 'CVE-2023-0001')

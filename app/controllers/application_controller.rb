@@ -4,6 +4,10 @@ class ApplicationController < ActionController::Base
   skip_before_action :verify_authenticity_token
   before_action :set_cache_headers
 
+  rescue_from Pagy::OverflowError do
+    raise ActiveRecord::RecordNotFound
+  end
+
   after_action lambda {
     request.session_options[:skip] = true
   }
