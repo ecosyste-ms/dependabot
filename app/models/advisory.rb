@@ -8,11 +8,11 @@ class Advisory < ApplicationRecord
   after_destroy :clear_issue_advisory_cache
 
   scope :by_severity, ->(severity) { where(severity: severity.upcase) if severity.present? }
-  scope :by_ecosystem, ->(ecosystem) { 
-    where("EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS pkg WHERE pkg->>'ecosystem' = ?)", ecosystem) if ecosystem.present?
+  scope :by_ecosystem, ->(ecosystem) {
+    where("packages @> ?", [{ ecosystem: ecosystem }].to_json) if ecosystem.present?
   }
   scope :by_package, ->(ecosystem, package_name) {
-    where("EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS pkg WHERE pkg->>'ecosystem' = ? AND pkg->>'package_name' = ?)", ecosystem, package_name)
+    where("packages @> ?", [{ ecosystem: ecosystem, package_name: package_name }].to_json)
   }
   scope :by_repository_url, ->(url) { where(repository_url: url) if url.present? }
   scope :recent, -> { order(published_at: :desc) }

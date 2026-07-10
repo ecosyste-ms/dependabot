@@ -51,6 +51,30 @@ class AdvisoryTest < ActiveSupport::TestCase
       assert_includes Advisory.by_package('npm', 'test-package'), @critical_advisory
       assert_not_includes Advisory.by_package('npm', 'test-package'), @low_advisory
     end
+
+    should 'filter by ecosystem when advisory has multiple packages' do
+      multi = Advisory.create!(
+        uuid: 'test-uuid-multi',
+        packages: [
+          { 'ecosystem' => 'npm', 'package_name' => 'a' },
+          { 'ecosystem' => 'cargo', 'package_name' => 'b' }
+        ]
+      )
+      assert_includes Advisory.by_ecosystem('cargo'), multi
+      assert_includes Advisory.by_package('cargo', 'b'), multi
+      assert_not_includes Advisory.by_ecosystem('cargo'), @critical_advisory
+    end
+
+    should 'not match by_package on ecosystem and name from different array elements' do
+      Advisory.create!(
+        uuid: 'test-uuid-cross',
+        packages: [
+          { 'ecosystem' => 'npm', 'package_name' => 'a' },
+          { 'ecosystem' => 'cargo', 'package_name' => 'b' }
+        ]
+      )
+      assert_empty Advisory.by_package('npm', 'b')
+    end
     
     should 'filter by repository url' do
       assert_includes Advisory.by_repository_url('https://github.com/test/repo'), @critical_advisory
