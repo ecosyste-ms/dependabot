@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_053814) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_10_153105) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -43,6 +43,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_053814) do
     t.index ["identifiers"], name: "index_advisories_on_identifiers", using: :gin
     t.index ["issues_count"], name: "index_advisories_on_issues_count"
     t.index ["merge_rate"], name: "index_advisories_on_merge_rate"
+    t.index ["packages"], name: "index_advisories_on_packages", opclass: :jsonb_path_ops, using: :gin
     t.index ["published_at"], name: "index_advisories_on_published_at"
     t.index ["repository_url"], name: "index_advisories_on_repository_url"
     t.index ["severity"], name: "index_advisories_on_severity"
