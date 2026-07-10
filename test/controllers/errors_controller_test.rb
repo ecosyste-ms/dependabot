@@ -29,6 +29,17 @@ class ErrorsControllerTest < ActionDispatch::IntegrationTest
     assert_match "couldn&#39;t be processed", response.body
   end
 
+  test 'error responses set no-store and no s-maxage' do
+    get '/500'
+    assert_equal 'no-store', response.headers['Cache-Control']
+
+    get '/404'
+    assert_equal 'no-store', response.headers['Cache-Control']
+
+    get '/422'
+    assert_equal 'no-store', response.headers['Cache-Control']
+  end
+
   test 'renders 500 with proper meta tags' do
     get '/500'
     assert_response :internal_server_error
