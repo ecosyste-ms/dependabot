@@ -1,4 +1,7 @@
 class ErrorsController < ApplicationController
+  skip_before_action :set_cache_headers
+  before_action { response.headers['Cache-Control'] = 'no-store' }
+
   def not_found
     respond_to do |format|
       format.html { render status: :not_found }
