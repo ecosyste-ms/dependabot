@@ -1,5 +1,5 @@
 <% name, count = owner %>
-<% return if @hidden_owners&.include?(name) %>
+<% return if @hidden_owners&.include?(name.downcase) %>
 <div class="card mb-3 repository d-flex">
   <div class="card-body pb-1">
     <div class="d-flex">

@@ -197,7 +197,7 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
   test "should return 404 for repository with hidden owner" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'hidden-org/repo', owner: 'hidden-org')
-    Owner.create!(host: host, login: 'hidden-org', hidden: true)
+    Owner.create!(host: host, login: 'HIDDEN-ORG', hidden: true)
 
     get host_repository_path(host, repository)
     assert_response :not_found

@@ -14,14 +14,25 @@ class Repository < ApplicationRecord
 
   belongs_to :host
 
-  has_many :issues, dependent: :delete_all
+  has_many :issues, dependent: :destroy
 
   validates :full_name, presence: true
 
   after_create :sync_repository_async
 
   scope :active, -> { where(status: nil) }
-  scope :visible, -> { active.where.not(last_synced_at: nil) }
+  scope :without_hidden_owner, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1
+        FROM owners
+        WHERE owners.host_id = repositories.host_id
+          AND lower(owners.login) = lower(repositories.owner)
+          AND owners.hidden = TRUE
+      )
+    SQL
+  }
+  scope :visible, -> { active.without_hidden_owner.where.not(last_synced_at: nil) }
   scope :created_after, ->(date) { where('created_at > ?', date) }
   scope :updated_after, ->(date) { where('updated_at > ?', date) }
   scope :owner, ->(owner) { where(owner: owner) }
@@ -77,7 +88,7 @@ class Repository < ApplicationRecord
 
   def owner_record
     return nil if owner.blank?
-    host.owners.find_by(login: owner)
+    host.owners.find_by('lower(login) = ?', owner.downcase)
   end
 
   def owner_hidden?
@@ -86,6 +97,8 @@ class Repository < ApplicationRecord
   end
 
   def sync_details
+    return if owner_hidden?
+
     conn = Faraday.new(repos_api_url) do |f|
       f.request :json
       f.request :retry
@@ -228,10 +241,14 @@ class Repository < ApplicationRecord
   end
   
   def sync_repository_async
+    return if owner_hidden?
+
     SyncRepositoryWorker.perform_async(id)
   end
   
   def sync
+    return if owner_hidden?
+
     sync_details
   end
   
