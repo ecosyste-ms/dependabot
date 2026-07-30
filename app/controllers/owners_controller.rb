@@ -2,14 +2,14 @@ class OwnersController < ApplicationController
   before_action :find_host
 
   def index
-    @scope = @host.repositories.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
+    @scope = @host.repositories.without_hidden_owner.where.not(owner: nil).group(:owner).count.sort_by{|k,v| -v }
     @pagy, @owners = pagy_array(@scope)
-    @hidden_owners = @host.owners.hidden.pluck(:login).to_set
+    @hidden_owners = @host.owners.hidden.pluck(:login).map(&:downcase).to_set
   end
 
   def show
     @owner = params[:id]
-    owner_record = @host.owners.find_by(login: @owner.downcase)
+    owner_record = @host.owners.find_by('lower(login) = ?', @owner.downcase)
     raise ActiveRecord::RecordNotFound if owner_record&.hidden?
 
     @pull_requests_count = @host.issues.owner(@owner).where(pull_request: true).count
@@ -34,7 +34,7 @@ class OwnersController < ApplicationController
 
   def issues
     @owner = params[:id]
-    owner_record = @host.owners.find_by(login: @owner.downcase)
+    owner_record = @host.owners.find_by('lower(login) = ?', @owner.downcase)
     raise ActiveRecord::RecordNotFound if owner_record&.hidden?
     
     # Get all issues for repositories owned by this owner
@@ -49,7 +49,7 @@ class OwnersController < ApplicationController
 
   def feed
     @owner = params[:id]
-    owner_record = @host.owners.find_by(login: @owner.downcase)
+    owner_record = @host.owners.find_by('lower(login) = ?', @owner.downcase)
     raise ActiveRecord::RecordNotFound if owner_record&.hidden?
     
     # Get recent issues for repositories owned by this owner with pagination

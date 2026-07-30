@@ -523,6 +523,9 @@ class Import < ApplicationRecord
     
     github_host = Host.find_by(name: 'GitHub')
     return nil unless github_host
+
+    hidden_owner = github_host.owners.hidden.where('lower(login) = ?', owner_name.downcase).exists?
+    return nil if hidden_owner
     
     # Use case-insensitive lookup to match the existing index
     existing_repo = Repository.find_by('lower(full_name) = ? AND host_id = ?', repo_name.downcase, github_host.id)

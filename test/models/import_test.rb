@@ -128,6 +128,19 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal 'open', created_issue.effective_state
   end
 
+  test "does not import repositories for a hidden owner" do
+    repository = Repository.create!(
+      host: @host,
+      full_name: "Hidden-Org/existing",
+      owner: "Hidden-Org"
+    )
+    Owner.create!(host: @host, login: "hidden-org", hidden: true)
+
+    assert_nil Import.send(:find_or_create_repository, repository.full_name)
+    assert_nil Import.send(:find_or_create_repository, "HIDDEN-ORG/new")
+    assert_not Repository.exists?(host: @host, full_name: "HIDDEN-ORG/new")
+  end
+
   test "processes different dependabot user variations" do
     # Test different dependabot user formats
     test_data = [

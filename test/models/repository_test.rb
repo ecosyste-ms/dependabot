@@ -81,5 +81,14 @@ class RepositoryTest < ActiveSupport::TestCase
       @repository.reload
       assert_nil @repository.last_synced_at
     end
+
+    should "not request details for a hidden owner" do
+      Owner.create!(host: @host, login: "OWNER", hidden: true)
+
+      @repository.sync_details
+
+      assert_not_requested :get, @repository.repos_api_url
+      assert_nil @repository.reload.last_synced_at
+    end
   end
 end

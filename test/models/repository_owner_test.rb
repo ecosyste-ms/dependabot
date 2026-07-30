@@ -20,8 +20,28 @@ class RepositoryOwnerTest < ActiveSupport::TestCase
     assert_equal true, @repository.owner_hidden?
   end
 
+  test "owner_hidden? matches owner login case-insensitively" do
+    Owner.create!(host: @host, login: 'TEST', hidden: true)
+    assert_equal true, @repository.owner_hidden?
+  end
+
   test "owner_hidden? returns false for nil hidden owner" do
     Owner.create!(host: @host, login: 'test', hidden: nil)
     assert_equal false, @repository.owner_hidden?
+  end
+
+  test "visible excludes repositories belonging to hidden owners" do
+    @repository.update!(last_synced_at: Time.current)
+    Owner.create!(host: @host, login: 'TEST', hidden: true)
+
+    assert_not_includes Repository.visible, @repository
+  end
+
+  test "hidden owner repositories are not enqueued for sync" do
+    Owner.create!(host: @host, login: 'TEST', hidden: true)
+
+    assert_no_difference -> { SyncRepositoryWorker.jobs.size } do
+      @repository.sync_repository_async
+    end
   end
 end
