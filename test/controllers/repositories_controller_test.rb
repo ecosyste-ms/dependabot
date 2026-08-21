@@ -209,4 +209,14 @@ class RepositoriesControllerTest < ActionDispatch::IntegrationTest
     get host_repository_path(host, 'nonexistent/repo')
     assert_response :not_found
   end
+
+  test "lookup syncs a stale repository" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    repository = Repository.create!(host: host, full_name: 'test/lookup-repo', last_synced_at: 2.days.ago)
+    Repository.any_instance.expects(:sync_repository_async)
+
+    get lookup_repositories_path(url: 'https://github.com/test/lookup-repo')
+
+    assert_redirected_to host_repository_path(host, repository)
+  end
 end

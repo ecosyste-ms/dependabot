@@ -12,7 +12,7 @@ class RepositoriesController < ApplicationController
     @repository = @host.repositories.find_by('lower(full_name) = ?', path.downcase)
     if @repository
       raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
-      @repository.sync_async(request.remote_ip) unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
+      @repository.sync_repository_async unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
       redirect_to host_repository_path(@host, @repository)
     else
       raise ActiveRecord::RecordNotFound
