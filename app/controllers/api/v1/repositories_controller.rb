@@ -30,7 +30,7 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
     @repository = @host.repositories.find_by('lower(full_name) = ?', path.downcase)
     if @repository
       raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
-      @repository.sync_async(request.remote_ip) unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
+      @repository.sync_repository_async unless @repository.last_synced_at.present? && @repository.last_synced_at > 1.day.ago
       redirect_to api_v1_host_repository_path(@host, @repository)
     else
       raise ActiveRecord::RecordNotFound, "Repository not found for URL: #{url}"
@@ -49,7 +49,7 @@ class Api::V1::RepositoriesController < Api::V1::ApplicationController
     @repository = @host.repositories.find_by!('lower(full_name) = ?', params[:id].downcase)
     raise ActiveRecord::RecordNotFound if @repository.owner_hidden?
     if @repository
-      @repository.sync_async
+      @repository.sync_repository_async
     end
     render json: { message: 'pong' }
   end

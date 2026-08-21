@@ -38,7 +38,7 @@ class CacheHeadersTest < ActionDispatch::IntegrationTest
   test "API ping endpoint does not set cache headers" do
     host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
     repository = Repository.create!(host: host, full_name: 'test/ping-repo')
-    Repository.any_instance.expects(:sync_async)
+    Repository.any_instance.expects(:sync_repository_async)
 
     get ping_api_v1_host_repository_url(host, repository), as: :json
     assert_response :success
